@@ -3,6 +3,7 @@
 #include <atomic>
 #include <expected>
 #include <memory>
+#include <optional>
 #include <semaphore>
 
 #include "../../RecvError.hpp"
@@ -34,7 +35,6 @@ public:
     this->tail_chunk->next = this->tail_chunk;
   }
 
-public:
   ~Channel() {
     auto chunk = this->head_chunk;
     auto index = this->head_index;
@@ -84,36 +84,18 @@ private:
 
   std::expected<T, RecvError> recv() {
     this->items_available.acquire();
-    if (this->disconnected.load(std::memory_order::relaxed) &&
-        this->size.load(std::memory_order::relaxed) == 0) {
+    auto item = this->recv_impl();
+    if (!item) {
       return std::unexpected(RecvError());
     }
-    if (this->head_index == CHUNK_SIZE) {
-      this->head_index = 0;
-      this->head_chunk = this->head_chunk->next;
-    }
-    auto item = std::move(this->head_chunk->items[this->head_index]);
-    this->head_index += 1;
-    this->size.fetch_sub(1, std::memory_order::release);
-    return item;
+    return std::move(*item);
   }
 
   std::expected<T, TryRecvError> try_recv() {
     if (!this->items_available.try_acquire()) {
       return std::unexpected(TryRecvError(TryRecvErrorKind::Empty));
     }
-    if (this->disconnected.load(std::memory_order::relaxed) &&
-        this->size.load(std::memory_order::relaxed) == 0) {
-      return std::unexpected(TryRecvError(TryRecvErrorKind::Disconnected));
-    }
-    if (this->head_index == CHUNK_SIZE) {
-      this->head_index = 0;
-      this->head_chunk = this->head_chunk->next;
-    }
-    auto item = std::move(this->head_chunk->items[this->head_index]);
-    this->head_index += 1;
-    this->size.fetch_sub(1, std::memory_order::relaxed);
-    return item;
+    return this->try_recv_impl();
   }
 
   template <typename Rep, typename Period>
@@ -122,18 +104,7 @@ private:
     if (!this->items_available.try_acquire_for(timeout)) {
       return std::unexpected(TryRecvError(TryRecvErrorKind::Empty));
     }
-    if (this->disconnected.load(std::memory_order::relaxed) &&
-        this->size.load(std::memory_order::relaxed) == 0) {
-      return std::unexpected(TryRecvError(TryRecvErrorKind::Disconnected));
-    }
-    if (this->head_index == CHUNK_SIZE) {
-      this->head_index = 0;
-      this->head_chunk = this->head_chunk->next;
-    }
-    auto item = std::move(this->head_chunk->items[this->head_index]);
-    this->head_index += 1;
-    this->size.fetch_sub(1, std::memory_order::relaxed);
-    return item;
+    return this->try_recv_impl();
   }
 
   template <typename Clock, typename Duration>
@@ -142,9 +113,21 @@ private:
     if (!this->items_available.try_acquire_until(deadline)) {
       return std::unexpected(TryRecvError(TryRecvErrorKind::Empty));
     }
+    return this->try_recv_impl();
+  }
+
+  std::expected<T, TryRecvError> try_recv_impl() {
+    auto item = this->recv_impl();
+    if (!item) {
+      return std::unexpected(TryRecvError(TryRecvErrorKind::Disconnected));
+    }
+    return std::move(*item);
+  }
+
+  std::optional<T> recv_impl() {
     if (this->disconnected.load(std::memory_order::relaxed) &&
         this->size.load(std::memory_order::relaxed) == 0) {
-      return std::unexpected(TryRecvError(TryRecvErrorKind::Disconnected));
+      return {};
     }
     if (this->head_index == CHUNK_SIZE) {
       this->head_index = 0;

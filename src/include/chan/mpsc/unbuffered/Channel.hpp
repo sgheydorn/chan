@@ -27,12 +27,9 @@ public:
 private:
   std::expected<void, SendError<T>> send(T item) {
     this->write_ready.acquire();
-    auto packet = this->packet.exchange(nullptr, std::memory_order::relaxed);
-    if (!packet) {
+    if (!this->send_impl(item)) {
       return std::unexpected(SendError(std::move(item)));
     }
-    *packet = std::move(item);
-    this->read_ready.release();
     return {};
   }
 
@@ -43,14 +40,7 @@ private:
       return std::unexpected(
           TrySendError(TrySendErrorKind::Full, std::move(item)));
     }
-    auto packet = this->packet.exchange(nullptr, std::memory_order::relaxed);
-    if (!packet) {
-      return std::unexpected(
-          TrySendError(TrySendErrorKind::Disconnected, std::move(item)));
-    }
-    *packet = std::move(item);
-    this->read_ready.release();
-    return {};
+    return this->try_send_impl();
   }
 
   template <typename Clock, typename Duration>
@@ -61,14 +51,25 @@ private:
       return std::unexpected(
           TrySendError(TrySendErrorKind::Full, std::move(item)));
     }
-    auto packet = this->packet.exchange(nullptr, std::memory_order::relaxed);
-    if (!packet) {
+    return this->try_send_impl();
+  }
+
+  std::expected<void, TrySendError<T>> try_send_impl(T &&item) {
+    if (!this->send_impl(item)) {
       return std::unexpected(
           TrySendError(TrySendErrorKind::Disconnected, std::move(item)));
     }
+    return {};
+  }
+
+  bool send_impl(T &item) {
+    auto packet = this->packet.exchange(nullptr, std::memory_order::relaxed);
+    if (!packet) {
+      return false;
+    }
     *packet = std::move(item);
     this->read_ready.release();
-    return {};
+    return true;
   }
 
   std::expected<T, RecvError> recv() {

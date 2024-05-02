@@ -59,21 +59,9 @@ public:
 private:
   std::expected<void, SendError<T>> send(T item) {
     this->space_available.acquire();
-    if (this->disconnected.load(std::memory_order::relaxed)) {
+    if (!this->send_impl(item)) {
       return std::unexpected(SendError(std::move(item)));
     }
-    auto tail_index_nomod =
-        this->tail_index.fetch_add(1, std::memory_order::relaxed);
-    auto tail_index = tail_index_nomod % this->capacity;
-    if (tail_index == 0 && tail_index_nomod != 0) {
-      this->tail_index.fetch_sub(this->capacity, std::memory_order::relaxed);
-    }
-    auto &packet = this->packet_buffer[tail_index];
-    std::allocator_traits<A>::construct(this->allocator, &packet.item,
-                                        std::move(item));
-    packet.ready.store(true, std::memory_order::release);
-    this->size.fetch_add(1, std::memory_order::relaxed);
-    this->packets_available.release();
     return {};
   }
 
@@ -82,23 +70,7 @@ private:
       return std::unexpected(
           TrySendError(TrySendErrorKind::Full, std::move(item)));
     }
-    if (this->disconnected.load(std::memory_order::relaxed)) {
-      return std::unexpected(
-          TrySendError(TrySendErrorKind::Disconnected, std::move(item)));
-    }
-    auto tail_index_nomod =
-        this->tail_index.fetch_add(1, std::memory_order::relaxed);
-    auto tail_index = tail_index_nomod % this->capacity;
-    if (tail_index == 0 && tail_index_nomod != 0) {
-      this->tail_index.fetch_sub(this->capacity, std::memory_order::relaxed);
-    }
-    auto &packet = this->packet_buffer[tail_index];
-    std::allocator_traits<A>::construct(this->allocator, &packet.item,
-                                        std::move(item));
-    packet.ready.store(true, std::memory_order::release);
-    this->size.fetch_add(1, std::memory_order::relaxed);
-    this->packets_available.release();
-    return {};
+    return this->try_send_impl(std::move(item));
   }
 
   template <typename Rep, typename Period>
@@ -108,23 +80,7 @@ private:
       return std::unexpected(
           TrySendError(TrySendErrorKind::Full, std::move(item)));
     }
-    if (this->disconnected.load(std::memory_order::relaxed)) {
-      return std::unexpected(
-          TrySendError(TrySendErrorKind::Disconnected, std::move(item)));
-    }
-    auto tail_index_nomod =
-        this->tail_index.fetch_add(1, std::memory_order::relaxed);
-    auto tail_index = tail_index_nomod % this->capacity;
-    if (tail_index == 0 && tail_index_nomod != 0) {
-      this->tail_index.fetch_sub(this->capacity, std::memory_order::relaxed);
-    }
-    auto &packet = this->packet_buffer[tail_index];
-    std::allocator_traits<A>::construct(this->allocator, &packet.item,
-                                        std::move(item));
-    packet.ready.store(true, std::memory_order::release);
-    this->size.fetch_add(1, std::memory_order::relaxed);
-    this->packets_available.release();
-    return {};
+    return this->try_send_impl(std::move(item));
   }
 
   template <typename Clock, typename Duration>
@@ -135,9 +91,20 @@ private:
       return std::unexpected(
           TrySendError(TrySendErrorKind::Full, std::move(item)));
     }
-    if (this->disconnected.load(std::memory_order::relaxed)) {
+    return this->try_send_impl(std::move(item));
+  }
+
+  std::expected<void, TrySendError<T>> try_send_impl(T &&item) {
+    if (!this->send_impl(item)) {
       return std::unexpected(
           TrySendError(TrySendErrorKind::Disconnected, std::move(item)));
+    }
+    return {};
+  }
+
+  bool send_impl(T &item) {
+    if (this->disconnected.load(std::memory_order::relaxed)) {
+      return false;
     }
     auto tail_index_nomod =
         this->tail_index.fetch_add(1, std::memory_order::relaxed);
@@ -151,45 +118,23 @@ private:
     packet.ready.store(true, std::memory_order::release);
     this->size.fetch_add(1, std::memory_order::relaxed);
     this->packets_available.release();
-    return {};
+    return true;
   }
 
   std::expected<T, RecvError> recv() {
     this->packets_available.acquire();
-    auto size = this->size.fetch_sub(1, std::memory_order::relaxed);
-    if (this->disconnected.load(std::memory_order::relaxed) && size == 0) {
+    auto item = this->recv_impl();
+    if (!item) {
       return std::unexpected(RecvError());
     }
-    auto &packet = this->packet_buffer[this->head_index];
-    while (!packet.ready.exchange(false, std::memory_order::acquire)) {
-      std::this_thread::yield();
-    }
-    auto item = std::move(packet.item);
-    if (++this->head_index == this->capacity) {
-      this->head_index = 0;
-    }
-    this->space_available.release();
-    return item;
+    return std::move(*item);
   }
 
   std::expected<T, TryRecvError> try_recv() {
     if (!this->packets_available.try_acquire()) {
       return std::unexpected(TryRecvError(TryRecvErrorKind::Empty));
     }
-    auto size = this->size.fetch_sub(1, std::memory_order::relaxed);
-    if (this->disconnected.load(std::memory_order::relaxed) && size == 0) {
-      return std::unexpected(TryRecvError(TryRecvErrorKind::Disconnected));
-    }
-    auto &packet = this->packet_buffer[this->head_index];
-    while (!packet.ready.exchange(false, std::memory_order::acquire)) {
-      std::this_thread::yield();
-    }
-    auto item = std::move(packet.item);
-    if (++this->head_index == this->capacity) {
-      this->head_index = 0;
-    }
-    this->space_available.release();
-    return item;
+    return this->try_recv_impl();
   }
 
   template <typename Rep, typename Period>
@@ -198,20 +143,7 @@ private:
     if (!this->packets_available.try_acquire_for(timeout)) {
       return std::unexpected(TryRecvError(TryRecvErrorKind::Empty));
     }
-    auto size = this->size.fetch_sub(1, std::memory_order::relaxed);
-    if (this->disconnected.load(std::memory_order::relaxed) && size == 0) {
-      return std::unexpected(TryRecvError(TryRecvErrorKind::Disconnected));
-    }
-    auto &packet = this->packet_buffer[this->head_index];
-    while (!packet.ready.exchange(false, std::memory_order::acquire)) {
-      std::this_thread::yield();
-    }
-    auto item = std::move(packet.item);
-    if (++this->head_index == this->capacity) {
-      this->head_index = 0;
-    }
-    this->space_available.release();
-    return item;
+    return this->try_recv_impl();
   }
 
   template <typename Clock, typename Duration>
@@ -220,9 +152,21 @@ private:
     if (!this->packets_available.try_acquire_until(deadline)) {
       return std::unexpected(TryRecvError(TryRecvErrorKind::Empty));
     }
+    return this->try_recv_impl();
+  }
+
+  std::expected<T, TryRecvError> try_recv_impl() {
+    auto item = this->recv_impl();
+    if (!item) {
+      return std::unexpected(TryRecvError(TryRecvErrorKind::Disconnected));
+    }
+    return std::move(*item);
+  }
+
+  std::optional<T> recv_impl() {
     auto size = this->size.fetch_sub(1, std::memory_order::relaxed);
     if (this->disconnected.load(std::memory_order::relaxed) && size == 0) {
-      return std::unexpected(TryRecvError(TryRecvErrorKind::Disconnected));
+      return {};
     }
     auto &packet = this->packet_buffer[this->head_index];
     while (!packet.ready.exchange(false, std::memory_order::acquire)) {

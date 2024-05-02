@@ -3,6 +3,7 @@
 #include <atomic>
 #include <expected>
 #include <memory>
+#include <optional>
 #include <semaphore>
 
 #include "../../SendError.hpp"
@@ -48,16 +49,9 @@ public:
 private:
   std::expected<void, SendError<T>> send(T item) {
     this->space_available.acquire();
-    if (this->disconnected.load(std::memory_order::relaxed)) {
+    if (!this->send_impl(item)) {
       return std::unexpected(SendError(std::move(item)));
     }
-    std::allocator_traits<A>::construct(
-        this->allocator, this->item_buffer + this->tail_index, std::move(item));
-    if (++this->tail_index == this->capacity) {
-      this->tail_index = 0;
-    }
-    this->size.fetch_add(1, std::memory_order::relaxed);
-    this->items_available.release();
     return {};
   }
 
@@ -66,18 +60,7 @@ private:
       return std::unexpected(
           TrySendError(TrySendErrorKind::Full, std::move(item)));
     }
-    if (this->disconnected.load(std::memory_order::relaxed)) {
-      return std::unexpected(
-          TrySendError(TrySendErrorKind::Disconnected, std::move(item)));
-    }
-    std::allocator_traits<A>::construct(
-        this->allocator, this->item_buffer + this->tail_index, std::move(item));
-    if (++this->tail_index == this->capacity) {
-      this->tail_index = 0;
-    }
-    this->size.fetch_add(1, std::memory_order::relaxed);
-    this->items_available.release();
-    return {};
+    return this->try_send_impl(std::move(item));
   }
 
   template <typename Rep, typename Period>
@@ -87,18 +70,7 @@ private:
       return std::unexpected(
           TrySendError(TrySendErrorKind::Full, std::move(item)));
     }
-    if (this->disconnected.load(std::memory_order::relaxed)) {
-      return std::unexpected(
-          TrySendError(TrySendErrorKind::Disconnected, std::move(item)));
-    }
-    std::allocator_traits<A>::construct(
-        this->allocator, this->item_buffer + this->tail_index, std::move(item));
-    if (++this->tail_index == this->capacity) {
-      this->tail_index = 0;
-    }
-    this->size.fetch_add(1, std::memory_order::relaxed);
-    this->items_available.release();
-    return {};
+    return this->try_send_impl(std::move(item));
   }
 
   template <typename Clock, typename Duration>
@@ -109,9 +81,20 @@ private:
       return std::unexpected(
           TrySendError(TrySendErrorKind::Full, std::move(item)));
     }
-    if (this->disconnected.load(std::memory_order::relaxed)) {
+    return this->try_send_impl(std::move(item));
+  }
+
+  std::expected<void, TrySendError<T>> try_send_impl(T &&item) {
+    if (!this->send_impl(item)) {
       return std::unexpected(
           TrySendError(TrySendErrorKind::Disconnected, std::move(item)));
+    }
+    return {};
+  }
+
+  bool send_impl(T &item) {
+    if (this->disconnected.load(std::memory_order::relaxed)) {
+      return false;
     }
     std::allocator_traits<A>::construct(
         this->allocator, this->item_buffer + this->tail_index, std::move(item));
@@ -120,37 +103,23 @@ private:
     }
     this->size.fetch_add(1, std::memory_order::relaxed);
     this->items_available.release();
-    return {};
+    return true;
   }
 
   std::expected<T, RecvError> recv() {
     this->items_available.acquire();
-    auto size = this->size.fetch_sub(1, std::memory_order::relaxed);
-    if (this->disconnected.load(std::memory_order::relaxed) && size == 0) {
+    auto item = this->recv_impl();
+    if (!item) {
       return std::unexpected(RecvError());
     }
-    auto item = std::move(this->item_buffer[this->head_index]);
-    if (++this->head_index == this->capacity) {
-      this->head_index = 0;
-    }
-    this->space_available.release();
-    return item;
+    return std::move(*item);
   }
 
   std::expected<T, TryRecvError> try_recv() {
     if (!this->items_available.try_acquire()) {
       return std::unexpected(TryRecvError(TryRecvErrorKind::Empty));
     }
-    auto size = this->size.fetch_sub(1, std::memory_order::relaxed);
-    if (this->disconnected.load(std::memory_order::relaxed) && size == 0) {
-      return std::unexpected(TryRecvError(TryRecvErrorKind::Disconnected));
-    }
-    auto item = std::move(this->item_buffer[this->head_index]);
-    if (++this->head_index == this->capacity) {
-      this->head_index = 0;
-    }
-    this->space_available.release();
-    return item;
+    return this->try_recv_impl();
   }
 
   template <typename Rep, typename Period>
@@ -159,16 +128,7 @@ private:
     if (!this->items_available.try_acquire_for(timeout)) {
       return std::unexpected(TryRecvError(TryRecvErrorKind::Empty));
     }
-    auto size = this->size.fetch_sub(1, std::memory_order::relaxed);
-    if (this->disconnected.load(std::memory_order::relaxed) && size == 0) {
-      return std::unexpected(TryRecvError(TryRecvErrorKind::Disconnected));
-    }
-    auto item = std::move(this->item_buffer[this->head_index]);
-    if (++this->head_index == this->capacity) {
-      this->head_index = 0;
-    }
-    this->space_available.release();
-    return item;
+    return this->try_recv_impl();
   }
 
   template <typename Clock, typename Duration>
@@ -177,9 +137,21 @@ private:
     if (!this->items_available.try_acquire_until(deadline)) {
       return std::unexpected(TryRecvError(TryRecvErrorKind::Empty));
     }
+    return this->try_recv_impl();
+  }
+
+  std::expected<T, TryRecvError> try_recv_impl() {
+    auto item = this->recv_impl();
+    if (!item) {
+      return std::unexpected(TryRecvError(TryRecvErrorKind::Disconnected));
+    }
+    return std::move(*item);
+  }
+
+  std::optional<T> recv_impl() {
     auto size = this->size.fetch_sub(1, std::memory_order::relaxed);
     if (this->disconnected.load(std::memory_order::relaxed) && size == 0) {
-      return std::unexpected(TryRecvError(TryRecvErrorKind::Disconnected));
+      return {};
     }
     auto item = std::move(this->item_buffer[this->head_index]);
     if (++this->head_index == this->capacity) {

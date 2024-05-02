@@ -29,23 +29,50 @@ public:
 private:
   std::expected<void, SendError<T>> send(T item) {
     this->write_ready.acquire();
-    auto packet = this->packet.exchange(nullptr, std::memory_order::relaxed);
-    if (!packet) {
+    if (!this->send_impl(item)) {
       return std::unexpected(SendError(std::move(item)));
     }
-    *packet = std::move(item);
-    this->read_ready.release();
     return {};
   }
 
   template <typename Rep, typename Period>
   std::expected<void, TrySendError<T>>
-  try_send_for(T item, const std::chrono::duration<Rep, Period> &timeout);
+  try_send_for(T item, const std::chrono::duration<Rep, Period> &timeout) {
+    if (!this->write_ready.try_acquire_for(timeout)) {
+      return std::unexpected(
+          TrySendError(TrySendErrorKind::Full, std::move(item)));
+    }
+    return this->try_send_impl();
+  }
 
   template <typename Clock, typename Duration>
   std::expected<void, TrySendError<T>>
   try_send_until(T item,
-                 const std::chrono::time_point<Clock, Duration> &deadline);
+                 const std::chrono::time_point<Clock, Duration> &deadline) {
+    if (!this->write_ready.try_acquire_until(deadline)) {
+      return std::unexpected(
+          TrySendError(TrySendErrorKind::Full, std::move(item)));
+    }
+    return this->try_send_impl();
+  }
+
+  std::expected<void, TrySendError<T>> try_send_impl(T &&item) {
+    if (!this->send_impl(item)) {
+      return std::unexpected(
+          TrySendError(TrySendErrorKind::Disconnected, std::move(item)));
+    }
+    return {};
+  }
+
+  bool send_impl(T &item) {
+    auto packet = this->packet.exchange(nullptr, std::memory_order::relaxed);
+    if (!packet) {
+      return false;
+    }
+    *packet = std::move(item);
+    this->read_ready.release();
+    return true;
+  }
 
   std::expected<T, RecvError> recv() {
     std::optional<T> packet;
