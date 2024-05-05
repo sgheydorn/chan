@@ -6,14 +6,13 @@
 #include <semaphore>
 #include <thread>
 
-#include "../../RecvError.hpp"
-#include "../../SendError.hpp"
-#include "../../TryRecvError.hpp"
-#include "../../TrySendError.hpp"
+#include "../../detail/BoundedChannel.hpp"
 #include "../Packet.hpp"
 
 namespace chan::mpmc::bounded {
-template <typename T, typename A> class Channel {
+template <typename T, typename A>
+class Channel : detail::BoundedChannel<Channel<T, A>, T> {
+  friend class detail::BoundedChannel<Channel, T>;
   template <typename, typename, typename> friend class Sender;
   template <typename, typename, typename> friend class Receiver;
 
@@ -23,8 +22,8 @@ template <typename T, typename A> class Channel {
   std::atomic_size_t head_index;
   std::atomic_size_t tail_index;
   std::atomic_size_t size;
-  std::counting_semaphore<> packets_available;
-  std::counting_semaphore<> space_available;
+  std::counting_semaphore<> send_ready;
+  std::counting_semaphore<> recv_ready;
   std::atomic_size_t sender_count;
   std::atomic_size_t receiver_count;
   std::atomic_bool disconnected;
@@ -35,8 +34,8 @@ public:
         packet_buffer(
             std::allocator_traits<A>::allocate(this->allocator, capacity)),
         capacity(capacity), head_index(0), tail_index(0), size(0),
-        packets_available(0), space_available(capacity), sender_count(1),
-        receiver_count(1), disconnected(false) {
+        send_ready(capacity), recv_ready(0), sender_count(1), receiver_count(1),
+        disconnected(false) {
     for (std::size_t index = 0; index < capacity; ++index) {
       std::allocator_traits<A>::construct(
           this->allocator, &this->packet_buffer[index].read_ready, false);
@@ -60,51 +59,6 @@ public:
   }
 
 private:
-  std::expected<void, SendError<T>> send(T item) {
-    this->space_available.acquire();
-    if (!this->send_impl(item)) {
-      return std::unexpected(SendError(std::move(item)));
-    }
-    return {};
-  }
-
-  std::expected<void, TrySendError<T>> try_send(T item) {
-    if (!this->space_available.try_acquire()) {
-      return std::unexpected(
-          TrySendError(TrySendErrorKind::Full, std::move(item)));
-    }
-    return this->try_send_impl();
-  }
-
-  template <typename Rep, typename Period>
-  std::expected<void, TrySendError<T>>
-  try_send_for(T item, const std::chrono::duration<Rep, Period> &timeout) {
-    if (!this->space_available.try_acquire_for(timeout)) {
-      return std::unexpected(
-          TrySendError(TrySendErrorKind::Full, std::move(item)));
-    }
-    return this->try_send_impl();
-  }
-
-  template <typename Clock, typename Duration>
-  std::expected<void, TrySendError<T>>
-  try_send_until(T item,
-                 const std::chrono::time_point<Clock, Duration> &deadline) {
-    if (!this->space_available.try_acquire_until(deadline)) {
-      return std::unexpected(
-          TrySendError(TrySendErrorKind::Full, std::move(item)));
-    }
-    return this->try_send_impl();
-  }
-
-  std::expected<void, TrySendError<T>> try_send_impl(T &&item) {
-    if (!this->send_impl(item)) {
-      return std::unexpected(
-          TrySendError(TrySendErrorKind::Disconnected, std::move(item)));
-    }
-    return {};
-  }
-
   bool send_impl(T &item) {
     if (this->disconnected.load(std::memory_order::relaxed)) {
       return false;
@@ -123,50 +77,7 @@ private:
                                         std::move(item));
     packet.read_ready.store(true, std::memory_order::release);
     this->size.fetch_add(1, std::memory_order::relaxed);
-    this->packets_available.release();
     return true;
-  }
-
-  std::expected<T, RecvError> recv() {
-    this->packets_available.acquire();
-    auto item = this->recv_impl();
-    if (!item) {
-      return std::unexpected(RecvError());
-    }
-    return std::move(*item);
-  }
-
-  std::expected<T, TryRecvError> try_recv() {
-    if (!this->packets_available.try_acquire()) {
-      return std::unexpected(TryRecvError(TryRecvErrorKind::Empty));
-    }
-    return this->try_recv_impl();
-  }
-
-  template <typename Rep, typename Period>
-  std::expected<T, TryRecvError>
-  try_recv_for(const std::chrono::duration<Rep, Period> &timeout) {
-    if (!this->packets_available.try_acquire_for(timeout)) {
-      return std::unexpected(TryRecvError(TryRecvErrorKind::Empty));
-    }
-    return this->try_recv_impl();
-  }
-
-  template <typename Clock, typename Duration>
-  std::expected<T, TryRecvError>
-  try_recv_until(const std::chrono::duration<Clock, Duration> &deadline) {
-    if (!this->packets_available.try_acquire_until(deadline)) {
-      return std::unexpected(TryRecvError(TryRecvErrorKind::Empty));
-    }
-    return this->try_recv_impl();
-  }
-
-  std::expected<T, TryRecvError> try_recv_impl() {
-    auto item = this->recv_impl();
-    if (!item) {
-      return std::unexpected(TryRecvError(TryRecvErrorKind::Disconnected));
-    }
-    return std::move(*item);
   }
 
   std::optional<T> recv_impl() {
@@ -186,7 +97,6 @@ private:
     }
     auto item = std::move(packet.item);
     packet.write_ready.store(true, std::memory_order::release);
-    this->space_available.release();
     return item;
   }
 
@@ -212,7 +122,7 @@ private:
           this->disconnected.exchange(true, std::memory_order::relaxed);
       auto receiver_count =
           this->receiver_count.load(std::memory_order::relaxed);
-      this->packets_available.release(receiver_count * 2);
+      this->recv_ready.release(receiver_count * 2);
       return destroy;
     }
     return false;
@@ -223,7 +133,7 @@ private:
       auto destroy =
           this->disconnected.exchange(true, std::memory_order::relaxed);
       auto sender_count = this->sender_count.load(std::memory_order::relaxed);
-      this->space_available.release(sender_count * 2);
+      this->send_ready.release(sender_count * 2);
       return destroy;
     }
     return false;
