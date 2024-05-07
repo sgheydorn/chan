@@ -63,10 +63,10 @@ private:
     if (this->disconnected.load(std::memory_order::relaxed)) {
       return false;
     }
-    auto tail_index_nomod =
-        this->tail_index.fetch_add(1, std::memory_order::relaxed);
-    auto tail_index = tail_index_nomod % this->capacity;
-    if (tail_index == 0 && tail_index_nomod != 0) {
+    auto tail_index =
+        this->tail_index.fetch_add(1, std::memory_order::relaxed) %
+        this->capacity;
+    if (tail_index == this->capacity - 1) {
       this->tail_index.fetch_sub(this->capacity, std::memory_order::relaxed);
     }
     auto &packet = this->packet_buffer[tail_index];
@@ -85,10 +85,10 @@ private:
     if (this->disconnected.load(std::memory_order::relaxed) && size == 0) {
       return {};
     }
-    auto head_index_nomod =
-        this->head_index.fetch_add(1, std::memory_order::relaxed);
-    auto head_index = head_index_nomod % this->capacity;
-    if (head_index == 0 && head_index_nomod != 0) {
+    auto head_index =
+        this->head_index.fetch_add(1, std::memory_order::relaxed) %
+        this->capacity;
+    if (head_index == this->capacity - 1) {
       this->head_index.fetch_sub(this->capacity, std::memory_order::relaxed);
     }
     auto &packet = this->packet_buffer[head_index];

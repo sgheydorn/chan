@@ -60,10 +60,10 @@ private:
     if (this->disconnected.load(std::memory_order::relaxed)) {
       return false;
     }
-    auto tail_index_nomod =
-        this->tail_index.fetch_add(1, std::memory_order::relaxed);
-    auto tail_index = tail_index_nomod % this->capacity;
-    if (tail_index == 0 && tail_index_nomod != 0) {
+    auto tail_index =
+        this->tail_index.fetch_add(1, std::memory_order::relaxed) %
+        this->capacity;
+    if (tail_index == this->capacity - 1) {
       this->tail_index.fetch_sub(this->capacity, std::memory_order::relaxed);
     }
     auto &packet = this->packet_buffer[tail_index];
