@@ -63,12 +63,14 @@ private:
     if (this->disconnected.load(std::memory_order::relaxed)) {
       return false;
     }
-    auto tail_index =
-        this->tail_index.fetch_add(1, std::memory_order::relaxed) %
-        this->capacity;
-    if (tail_index == this->capacity - 1) {
-      this->tail_index.fetch_sub(this->capacity, std::memory_order::relaxed);
-    }
+
+    std::size_t tail_index;
+    do {
+      tail_index = this->tail_index.load(std::memory_order::relaxed);
+    } while (!this->tail_index.compare_exchange_weak(
+        tail_index, tail_index == this->capacity - 1 ? 0 : tail_index + 1,
+        std::memory_order::relaxed));
+
     auto &packet = this->packet_buffer[tail_index];
     while (!packet.write_ready.exchange(false, std::memory_order::acquire)) {
       std::this_thread::yield();
@@ -81,16 +83,23 @@ private:
   }
 
   std::optional<T> recv_impl() {
-    auto size = this->size.fetch_sub(1, std::memory_order::relaxed);
+    std::size_t size;
+    do {
+      size = this->size.load(std::memory_order::relaxed);
+    } while (size != 0 && !this->size.compare_exchange_weak(
+                              size, size - 1, std::memory_order::relaxed));
+
     if (this->disconnected.load(std::memory_order::relaxed) && size == 0) {
       return {};
     }
-    auto head_index =
-        this->head_index.fetch_add(1, std::memory_order::relaxed) %
-        this->capacity;
-    if (head_index == this->capacity - 1) {
-      this->head_index.fetch_sub(this->capacity, std::memory_order::relaxed);
-    }
+
+    std::size_t head_index;
+    do {
+      head_index = this->head_index.load(std::memory_order::relaxed);
+    } while (!this->head_index.compare_exchange_weak(
+        head_index, head_index == this->capacity - 1 ? 0 : head_index + 1,
+        std::memory_order::relaxed));
+
     auto &packet = this->packet_buffer[head_index];
     while (!packet.read_ready.exchange(false, std::memory_order::acquire)) {
       std::this_thread::yield();

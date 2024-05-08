@@ -60,12 +60,14 @@ private:
     if (this->disconnected.load(std::memory_order::relaxed)) {
       return false;
     }
-    auto tail_index =
-        this->tail_index.fetch_add(1, std::memory_order::relaxed) %
-        this->capacity;
-    if (tail_index == this->capacity - 1) {
-      this->tail_index.fetch_sub(this->capacity, std::memory_order::relaxed);
-    }
+
+    std::size_t tail_index;
+    do {
+      tail_index = this->tail_index.load(std::memory_order::relaxed);
+    } while (!this->tail_index.compare_exchange_weak(
+        tail_index, tail_index == this->capacity - 1 ? 0 : tail_index + 1,
+        std::memory_order::relaxed));
+
     auto &packet = this->packet_buffer[tail_index];
     std::allocator_traits<A>::construct(this->allocator, &packet.item,
                                         std::move(item));
