@@ -60,7 +60,7 @@ public:
           TrySendError(TrySendErrorKind::Disconnected, std::move(item)));
     }
     auto result = this->channel->try_send(std::move(item));
-    if (!result && result.error().is_disconnect()) {
+    if (!result && result.error().is_disconnected()) {
       this->disconnect();
     }
     return result;
@@ -74,7 +74,7 @@ public:
           TrySendError(TrySendErrorKind::Disconnected, std::move(item)));
     }
     auto result = this->channel->try_send_for(std::move(item), timeout);
-    if (!result && result.error().is_disconnect()) {
+    if (!result && result.error().is_disconnected()) {
       this->disconnect();
     }
     return result;
@@ -89,7 +89,7 @@ public:
           TrySendError(TrySendErrorKind::Disconnected, std::move(item)));
     }
     auto result = this->channel->try_send_until(std::move(item), deadline);
-    if (!result && result.error().is_disconnect()) {
+    if (!result && result.error().is_disconnected()) {
       this->disconnect();
     }
     return result;

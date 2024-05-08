@@ -19,6 +19,22 @@ template <typename Self, typename T> struct UnbufferedChannel {
     }
   }
 
+  std::expected<void, TrySendError<T>> try_send(T item) {
+    if (!static_cast<Self *>(this)->send_ready.try_acquire()) {
+      return std::unexpected(
+          TrySendError(TrySendErrorKind::Full, std::move(item)));
+    }
+    auto ok = static_cast<Self *>(this)->send_impl(item);
+    static_cast<Self *>(this)->recv_ready.release();
+
+    if (ok) {
+      return {};
+    } else {
+      return std::unexpected(
+          TrySendError(TrySendErrorKind::Disconnected, std::move(item)));
+    }
+  }
+
   template <typename Rep, typename Period>
   std::expected<void, TrySendError<T>>
   try_send_for(T item, const std::chrono::duration<Rep, Period> &timeout) {
@@ -33,7 +49,7 @@ template <typename Self, typename T> struct UnbufferedChannel {
       return {};
     } else {
       return std::unexpected(
-          TrySendError(TrySendErrorKind::Full, std::move(item)));
+          TrySendError(TrySendErrorKind::Disconnected, std::move(item)));
     }
   }
 
@@ -52,7 +68,7 @@ template <typename Self, typename T> struct UnbufferedChannel {
       return {};
     } else {
       return std::unexpected(
-          TrySendError(TrySendErrorKind::Full, std::move(item)));
+          TrySendError(TrySendErrorKind::Disconnected, std::move(item)));
     }
   }
 };

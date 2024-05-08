@@ -70,7 +70,7 @@ public:
       return std::nullopt;
     }
     auto item = this->channel->try_recv();
-    if (!item && item.error().is_disconnect()) {
+    if (!item && item.error().is_disconnected()) {
       this->disconnect();
     }
     return item;
@@ -83,7 +83,7 @@ public:
       return std::nullopt;
     }
     auto item = this->channel->try_recv_for(timeout);
-    if (!item && item.error().is_disconnect()) {
+    if (!item && item.error().is_disconnected()) {
       this->disconnect();
     }
     return item;
@@ -96,7 +96,7 @@ public:
       return std::nullopt;
     }
     auto item = this->channel->try_recv_until(deadline);
-    if (!item && item.error().is_disconnect()) {
+    if (!item && item.error().is_disconnected()) {
       this->disconnect();
     }
     return item;

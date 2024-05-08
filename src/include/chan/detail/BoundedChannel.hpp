@@ -34,7 +34,7 @@ template <typename Self, typename T> struct BoundedChannel {
       return {};
     } else {
       return std::unexpected(
-          TrySendError(TrySendErrorKind::Full, std::move(item)));
+          TrySendError(TrySendErrorKind::Disconnected, std::move(item)));
     }
   }
 
@@ -52,7 +52,7 @@ template <typename Self, typename T> struct BoundedChannel {
       return {};
     } else {
       return std::unexpected(
-          TrySendError(TrySendErrorKind::Full, std::move(item)));
+          TrySendError(TrySendErrorKind::Disconnected, std::move(item)));
     }
   }
 
@@ -71,7 +71,7 @@ template <typename Self, typename T> struct BoundedChannel {
       return {};
     } else {
       return std::unexpected(
-          TrySendError(TrySendErrorKind::Full, std::move(item)));
+          TrySendError(TrySendErrorKind::Disconnected, std::move(item)));
     }
   }
 

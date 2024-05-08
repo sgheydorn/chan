@@ -62,6 +62,18 @@ public:
     return result;
   }
 
+  std::expected<void, TrySendError<T>> try_send(T item) {
+    if (!this->channel) {
+      return std::unexpected(
+          TrySendError(TrySendErrorKind::Disconnected, std::move(item)));
+    }
+    auto result = this->channel->try_send(std::move(item));
+    if (!result && result.error().is_disconnected()) {
+      this->disconnect();
+    }
+    return result;
+  }
+
   template <typename Rep, typename Period>
   std::expected<void, TrySendError<T>>
   try_send_for(T item, const std::chrono::duration<Rep, Period> &timeout) {

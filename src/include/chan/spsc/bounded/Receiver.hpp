@@ -59,7 +59,7 @@ public:
       return std::unexpected(TryRecvError(TryRecvErrorKind::Disconnected));
     }
     auto result = this->channel->try_recv();
-    if (!result && result.error().is_disconnect()) {
+    if (!result && result.error().is_disconnected()) {
       this->disconnect();
     }
     return result;
@@ -72,7 +72,7 @@ public:
       return std::unexpected(TryRecvError(TryRecvErrorKind::Disconnected));
     }
     auto result = this->channel->try_recv_for(timeout);
-    if (!result && result.error().is_disconnect()) {
+    if (!result && result.error().is_disconnected()) {
       this->disconnect();
     }
     return result;
@@ -85,7 +85,7 @@ public:
       return std::unexpected(TryRecvError(TryRecvErrorKind::Disconnected));
     }
     auto result = this->channel->try_recv_until(deadline);
-    if (!result && result.error().is_disconnect()) {
+    if (!result && result.error().is_disconnected()) {
       this->disconnect();
     }
     return result;
