@@ -89,7 +89,7 @@ private:
     } while (size != 0 && !this->size.compare_exchange_weak(
                               size, size - 1, std::memory_order::relaxed));
 
-    if (this->disconnected.load(std::memory_order::relaxed) && size == 0) {
+    if (size == 0) {
       return {};
     }
 

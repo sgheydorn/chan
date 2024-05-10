@@ -60,8 +60,7 @@ private:
   }
 
   std::optional<T> recv_impl() {
-    auto size = this->size.fetch_sub(1, std::memory_order::relaxed);
-    if (this->disconnected.load(std::memory_order::relaxed) && size == 0) {
+    if (this->size.fetch_sub(1, std::memory_order::relaxed) == 0) {
       return {};
     }
     auto item = std::move(this->item_buffer[this->head_index]);

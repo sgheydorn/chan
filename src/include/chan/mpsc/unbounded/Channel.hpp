@@ -108,8 +108,7 @@ private:
   }
 
   std::optional<T> recv_impl() {
-    if (this->disconnected.load(std::memory_order::relaxed) &&
-        this->size.load(std::memory_order::relaxed) == 0) {
+    if (this->size.load(std::memory_order::relaxed) == 0) {
       return {};
     }
     if (this->head_index == CHUNK_SIZE) {
