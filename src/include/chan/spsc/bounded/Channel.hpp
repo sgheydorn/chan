@@ -22,6 +22,7 @@ class Channel : detail::BoundedChannel<Channel<T, A>, T> {
   std::atomic_size_t size;
   std::counting_semaphore<> send_ready;
   std::counting_semaphore<> recv_ready;
+  std::atomic_bool recv_done;
   std::atomic_bool disconnected;
 
 public:
@@ -30,7 +31,8 @@ public:
         item_buffer(
             std::allocator_traits<A>::allocate(this->allocator, capacity)),
         capacity(capacity), head_index(0), tail_index(0), size(0),
-        send_ready(capacity), recv_ready(0), disconnected(false) {}
+        send_ready(capacity), recv_ready(0), recv_done(false),
+        disconnected(false) {}
 
   ~Channel() {
     auto index = this->head_index;
@@ -47,7 +49,7 @@ public:
 
 private:
   bool send_impl(T &item) {
-    if (this->disconnected.load(std::memory_order::relaxed)) {
+    if (this->recv_done.load(std::memory_order::relaxed)) {
       return false;
     }
     std::allocator_traits<A>::construct(
@@ -71,17 +73,14 @@ private:
   }
 
   bool release_sender() {
-    auto destroy =
-        this->disconnected.exchange(true, std::memory_order::relaxed);
     this->recv_ready.release();
-    return destroy;
+    return this->disconnected.exchange(true, std::memory_order::relaxed);
   }
 
   bool release_receiver() {
-    auto destroy =
-        this->disconnected.exchange(true, std::memory_order::relaxed);
+    this->recv_done.store(true, std::memory_order::relaxed);
     this->send_ready.release();
-    return destroy;
+    return this->disconnected.exchange(true, std::memory_order::relaxed);
   }
 };
 } // namespace chan::spsc::bounded

@@ -26,6 +26,7 @@ class Channel : detail::BoundedChannel<Channel<T, A>, T> {
   std::counting_semaphore<> recv_ready;
   std::atomic_size_t sender_count;
   std::atomic_size_t receiver_count;
+  std::atomic_bool recv_done;
   std::atomic_bool disconnected;
 
 public:
@@ -35,7 +36,7 @@ public:
             std::allocator_traits<A>::allocate(this->allocator, capacity)),
         capacity(capacity), head_index(0), tail_index(0), size(0),
         send_ready(capacity), recv_ready(0), sender_count(1), receiver_count(1),
-        disconnected(false) {
+        recv_done(false), disconnected(false) {
     for (std::size_t index = 0; index < capacity; ++index) {
       std::allocator_traits<A>::construct(
           this->allocator, &this->packet_buffer[index].read_ready, false);
@@ -60,7 +61,7 @@ public:
 
 private:
   bool send_impl(T &item) {
-    if (this->disconnected.load(std::memory_order::relaxed)) {
+    if (this->recv_done.load(std::memory_order::relaxed)) {
       return false;
     }
 
@@ -110,42 +111,43 @@ private:
   }
 
   bool acquire_sender() {
-    if (this->disconnected.load(std::memory_order::relaxed)) {
-      return false;
-    }
-    this->sender_count.fetch_add(1, std::memory_order::relaxed);
-    return true;
+    std::size_t sender_count;
+    do {
+      sender_count = this->sender_count.load(std::memory_order::relaxed);
+    } while (sender_count != 0 &&
+             !this->sender_count.compare_exchange_weak(
+                 sender_count, sender_count + 1, std::memory_order::relaxed));
+    return sender_count != 0;
   }
 
   bool acquire_receiver() {
-    if (this->disconnected.load(std::memory_order::relaxed)) {
-      return false;
-    }
-    this->receiver_count.fetch_add(1, std::memory_order::relaxed);
-    return true;
+    std::size_t receiver_count;
+    do {
+      receiver_count = this->receiver_count.load(std::memory_order::relaxed);
+    } while (receiver_count != 0 && !this->receiver_count.compare_exchange_weak(
+                                        receiver_count, receiver_count + 1,
+                                        std::memory_order::relaxed));
+    return receiver_count != 0;
   }
 
   bool release_sender() {
-    if (this->sender_count.fetch_sub(1, std::memory_order::acq_rel) == 1) {
-      auto destroy =
-          this->disconnected.exchange(true, std::memory_order::relaxed);
-      auto receiver_count =
-          this->receiver_count.load(std::memory_order::relaxed);
-      this->recv_ready.release(receiver_count * 2);
-      return destroy;
+    if (this->sender_count.fetch_sub(1, std::memory_order::acq_rel) != 1) {
+      return false;
     }
-    return false;
+    auto receiver_count =
+        this->receiver_count.exchange(0, std::memory_order::relaxed);
+    this->recv_ready.release(receiver_count);
+    return this->disconnected.exchange(true, std::memory_order::relaxed);
   }
 
   bool release_receiver() {
-    if (this->receiver_count.fetch_sub(1, std::memory_order::acq_rel) == 1) {
-      auto destroy =
-          this->disconnected.exchange(true, std::memory_order::relaxed);
-      auto sender_count = this->sender_count.load(std::memory_order::relaxed);
-      this->send_ready.release(sender_count * 2);
-      return destroy;
+    if (this->receiver_count.fetch_sub(1, std::memory_order::acq_rel) != 1) {
+      return false;
     }
-    return false;
+    auto sender_count =
+        this->sender_count.exchange(0, std::memory_order::relaxed);
+    this->send_ready.release(sender_count);
+    return this->disconnected.exchange(true, std::memory_order::relaxed);
   }
 };
 } // namespace chan::mpmc::bounded

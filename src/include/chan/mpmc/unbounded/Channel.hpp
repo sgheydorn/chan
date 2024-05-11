@@ -146,23 +146,23 @@ private:
   }
 
   bool acquire_receiver() {
-    if (this->disconnected.load(std::memory_order::relaxed)) {
-      return false;
-    }
-    this->receiver_count.fetch_add(1, std::memory_order::relaxed);
-    return true;
+    std::size_t receiver_count;
+    do {
+      receiver_count = this->receiver_count.load(std::memory_order::relaxed);
+    } while (receiver_count != 0 && !this->receiver_count.compare_exchange_weak(
+                                        receiver_count, receiver_count + 1,
+                                        std::memory_order::relaxed));
+    return receiver_count != 0;
   }
 
   bool release_sender() {
-    if (this->sender_count.fetch_sub(1, std::memory_order::acq_rel) == 1) {
-      auto destroy =
-          this->disconnected.exchange(true, std::memory_order::relaxed);
-      auto receiver_count =
-          this->receiver_count.load(std::memory_order::relaxed);
-      this->recv_ready.release(receiver_count * 2);
-      return destroy;
+    if (this->sender_count.fetch_sub(1, std::memory_order::acq_rel) != 1) {
+      return false;
     }
-    return false;
+    auto receiver_count =
+        this->receiver_count.exchange(0, std::memory_order::relaxed);
+    this->recv_ready.release(receiver_count);
+    return this->disconnected.exchange(true, std::memory_order::relaxed);
   }
 
   bool release_receiver() {

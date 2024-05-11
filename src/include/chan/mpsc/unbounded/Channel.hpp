@@ -130,12 +130,11 @@ private:
   }
 
   bool release_sender() {
-    if (this->sender_count.fetch_sub(1, std::memory_order::acq_rel) == 1) {
-      this->recv_ready.release();
-      return this->disconnected.exchange(true, std::memory_order::relaxed);
-    } else {
+    if (this->sender_count.fetch_sub(1, std::memory_order::acq_rel) != 1) {
       return false;
     }
+    this->recv_ready.release();
+    return this->disconnected.exchange(true, std::memory_order::relaxed);
   }
 
   bool release_receiver() {

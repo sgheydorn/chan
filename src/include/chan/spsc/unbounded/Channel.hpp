@@ -98,10 +98,8 @@ private:
   }
 
   bool release_sender() {
-    auto destroy =
-        this->disconnected.exchange(true, std::memory_order::relaxed);
     this->recv_ready.release();
-    return destroy;
+    return this->disconnected.exchange(true, std::memory_order::relaxed);
   }
 
   bool release_receiver() {

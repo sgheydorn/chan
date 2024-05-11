@@ -48,28 +48,28 @@ private:
   }
 
   bool acquire_sender() {
-    if (this->disconnected.load(std::memory_order::relaxed)) {
-      return false;
-    }
-    this->sender_count.fetch_add(1, std::memory_order::relaxed);
-    return true;
+    std::size_t sender_count;
+    do {
+      sender_count = this->sender_count.load(std::memory_order::relaxed);
+    } while (sender_count != 0 &&
+             !this->sender_count.compare_exchange_weak(
+                 sender_count, sender_count + 1, std::memory_order::relaxed));
+    return sender_count != 0;
   }
 
   bool release_sender() {
-    if (this->sender_count.fetch_sub(1, std::memory_order::acq_rel) == 1) {
-      this->recv_ready.release();
-      return this->disconnected.exchange(true, std::memory_order::relaxed);
-    } else {
+    if (this->sender_count.fetch_sub(1, std::memory_order::acq_rel) != 1) {
       return false;
     }
+    this->recv_ready.release();
+    return this->disconnected.exchange(true, std::memory_order::relaxed);
   }
 
   bool release_receiver() {
-    auto destroy =
-        this->disconnected.exchange(true, std::memory_order::relaxed);
-    auto sender_count = this->sender_count.load(std::memory_order::relaxed);
-    this->send_ready.release(sender_count * 2);
-    return destroy;
+    auto sender_count =
+        this->sender_count.exchange(0, std::memory_order::relaxed);
+    this->send_ready.release(sender_count);
+    return this->disconnected.exchange(true, std::memory_order::relaxed);
   }
 };
 } // namespace chan::mpsc::unbuffered
