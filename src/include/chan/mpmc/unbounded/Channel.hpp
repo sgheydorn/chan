@@ -119,9 +119,16 @@ private:
   }
 
   std::optional<T> recv_impl() {
-    if (this->size.load(std::memory_order::relaxed) == 0) {
+    std::size_t size;
+    do {
+      size = this->size.load(std::memory_order::relaxed);
+    } while (size != 0 && !this->size.compare_exchange_weak(
+                              size, size - 1, std::memory_order::relaxed));
+
+    if (size == 0) {
       return {};
     }
+
     Packet<T> *packet;
     {
       std::lock_guard _lock(this->head_position_mutex);
@@ -138,7 +145,6 @@ private:
     auto item = std::move(packet->item);
     std::allocator_traits<A>::destroy(this->allocator, &packet->item);
     packet->write_ready.store(true, std::memory_order::release);
-    this->size.fetch_sub(1, std::memory_order::relaxed);
     return item;
   }
 
