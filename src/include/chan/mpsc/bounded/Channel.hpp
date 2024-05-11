@@ -86,6 +86,7 @@ private:
       std::this_thread::yield();
     }
     auto item = std::move(packet.item);
+    std::allocator_traits<A>::destroy(this->allocator, &packet.item);
     if (++this->head_index == this->capacity) {
       this->head_index = 0;
     }

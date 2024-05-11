@@ -91,7 +91,9 @@ private:
       this->head_index = 0;
       this->head_chunk = this->head_chunk->next;
     }
-    auto item = std::move(this->head_chunk->items[this->head_index]);
+    auto &chan_item = this->head_chunk->items[this->head_index];
+    auto item = std::move(chan_item);
+    std::allocator_traits<A>::destroy(this->allocator, &chan_item);
     this->head_index += 1;
     this->size.fetch_sub(1, std::memory_order::relaxed);
     return item;

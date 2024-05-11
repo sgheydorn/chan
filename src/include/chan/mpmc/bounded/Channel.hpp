@@ -106,6 +106,7 @@ private:
       std::this_thread::yield();
     }
     auto item = std::move(packet.item);
+    std::allocator_traits<A>::destroy(this->allocator, &packet.item);
     packet.write_ready.store(true, std::memory_order::release);
     return item;
   }

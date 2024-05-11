@@ -120,6 +120,7 @@ private:
       std::this_thread::yield();
     }
     auto item = std::move(packet.item);
+    std::allocator_traits<A>::destroy(this->allocator, &packet.item);
     this->head_index += 1;
     this->size.fetch_sub(1, std::memory_order::release);
     return item;

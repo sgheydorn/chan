@@ -65,7 +65,9 @@ private:
     if (this->size.fetch_sub(1, std::memory_order::relaxed) == 0) {
       return {};
     }
-    auto item = std::move(this->item_buffer[this->head_index]);
+    auto &chan_item = this->item_buffer[this->head_index];
+    auto item = std::move(chan_item);
+    std::allocator_traits<A>::destroy(this->allocator, &chan_item);
     if (++this->head_index == this->capacity) {
       this->head_index = 0;
     }
