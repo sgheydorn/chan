@@ -96,7 +96,7 @@ private:
     auto item = std::move(chan_item);
     std::allocator_traits<A>::destroy(this->allocator, &chan_item);
     this->head_index += 1;
-    this->size.fetch_sub(1, std::memory_order::relaxed);
+    this->size.fetch_sub(1, std::memory_order::release);
     return item;
   }
 
