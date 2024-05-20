@@ -1,4 +1,5 @@
-#pragma once
+#ifndef _CHAN_MPSC_UNBOUNDED_PACKET_CHUNK_H
+#define _CHAN_MPSC_UNBOUNDED_PACKET_CHUNK_H
 
 #include <cstddef>
 
@@ -10,3 +11,5 @@ template <typename T, std::size_t CHUNK_SIZE> struct PacketChunk {
   Packet<T> packets[CHUNK_SIZE];
 };
 } // namespace chan::mpsc::unbounded
+
+#endif

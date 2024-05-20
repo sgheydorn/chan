@@ -1,4 +1,5 @@
-#pragma once
+#ifndef _CHAN_TRY_RECV_ERROR_H
+#define _CHAN_TRY_RECV_ERROR_H
 
 #include "TryRecvErrorKind.hpp"
 
@@ -13,3 +14,5 @@ struct TryRecvError {
   }
 };
 } // namespace chan
+
+#endif

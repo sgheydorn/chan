@@ -1,4 +1,5 @@
-#pragma once
+#ifndef _CHAN_MPMC_UNBOUNDED_CREATE_H
+#define _CHAN_MPMC_UNBOUNDED_CREATE_H
 
 #include "Channel.hpp"
 #include "Receiver.hpp"
@@ -19,3 +20,5 @@ create(A1 chunk_allocator = A1(), A2 channel_allocator = A2()) {
   return {std::move(sender), std::move(receiver)};
 }
 } // namespace chan::mpmc::unbounded
+
+#endif

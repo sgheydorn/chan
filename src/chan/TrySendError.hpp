@@ -1,4 +1,5 @@
-#pragma once
+#ifndef _CHAN_TRY_SEND_ERROR_H
+#define _CHAN_TRY_SEND_ERROR_H
 
 #include "TrySendErrorKind.hpp"
 
@@ -14,3 +15,5 @@ template <typename T> struct TrySendError {
   }
 };
 } // namespace chan
+
+#endif

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef _CHAN_MPSC_UNBUFFERED_CREATE_H
+#define _CHAN_MPSC_UNBUFFERED_CREATE_H
 
 #include "Channel.hpp"
 #include "Receiver.hpp"
@@ -14,3 +15,5 @@ std::pair<Sender<T, A>, Receiver<T, A>> create(A allocator = A()) {
   return {std::move(sender), std::move(receiver)};
 }
 } // namespace chan::mpsc::unbuffered
+
+#endif

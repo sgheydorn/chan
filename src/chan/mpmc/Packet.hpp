@@ -1,4 +1,5 @@
-#pragma once
+#ifndef _CHAN_MPMC_PACKET_H
+#define _CHAN_MPMC_PACKET_H
 
 #include <atomic>
 
@@ -9,3 +10,5 @@ template <typename T> struct Packet {
   std::atomic_bool write_ready;
 };
 } // namespace chan::mpmc
+
+#endif

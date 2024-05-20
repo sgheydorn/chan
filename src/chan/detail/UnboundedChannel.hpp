@@ -1,4 +1,5 @@
-#pragma once
+#ifndef _CHAN_DETAIL_UNBOUNDED_CHANNEL_H
+#define _CHAN_DETAIL_UNBOUNDED_CHANNEL_H
 
 #include <expected>
 
@@ -58,3 +59,5 @@ template <typename Self, typename T> struct UnboundedChannel {
   }
 };
 } // namespace chan::detail
+
+#endif

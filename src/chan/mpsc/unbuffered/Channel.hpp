@@ -1,4 +1,5 @@
-#pragma once
+#ifndef _CHAN_MPSC_UNBUFFERED_CHANNEL_H
+#define _CHAN_MPSC_UNBUFFERED_CHANNEL_H
 
 #include <atomic>
 #include <expected>
@@ -73,3 +74,5 @@ private:
   }
 };
 } // namespace chan::mpsc::unbuffered
+
+#endif

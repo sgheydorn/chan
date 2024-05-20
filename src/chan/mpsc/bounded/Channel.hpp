@@ -1,4 +1,5 @@
-#pragma once
+#ifndef _CHAN_MPSC_BOUNDED_CHANNEL_H
+#define _CHAN_MPSC_BOUNDED_CHANNEL_H
 
 #include <atomic>
 #include <memory>
@@ -120,3 +121,5 @@ private:
   }
 };
 } // namespace chan::mpsc::bounded
+
+#endif

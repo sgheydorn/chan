@@ -1,4 +1,5 @@
-#pragma once
+#ifndef _CHAN_SPSC_BOUNDED_CREATE_H
+#define _CHAN_SPSC_BOUNDED_CREATE_H
 
 #include "Channel.hpp"
 #include "Receiver.hpp"
@@ -21,3 +22,5 @@ create(std::size_t capacity, A1 buffer_allocator = A1(),
   return {std::move(sender), std::move(receiver)};
 }
 } // namespace chan::spsc::bounded
+
+#endif

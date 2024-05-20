@@ -1,4 +1,5 @@
-#pragma once
+#ifndef _CHAN_MPSC_UNBOUNDED_CHANNEL_H
+#define _CHAN_MPSC_UNBOUNDED_CHANNEL_H
 
 #include <atomic>
 #include <expected>
@@ -144,3 +145,5 @@ private:
   }
 };
 } // namespace chan::mpsc::unbounded
+
+#endif

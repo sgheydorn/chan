@@ -1,4 +1,5 @@
-#pragma once
+#ifndef _CHAN_DETAIL_UNBUFFERED_CHANNEL_H
+#define _CHAN_DETAIL_UNBUFFERED_CHANNEL_H
 
 #include <expected>
 
@@ -73,3 +74,5 @@ template <typename Self, typename T> struct UnbufferedChannel {
   }
 };
 } // namespace chan::detail
+
+#endif

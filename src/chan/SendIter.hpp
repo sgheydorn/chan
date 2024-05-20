@@ -1,4 +1,5 @@
-#pragma once
+#ifndef _CHAN_SEND_ITER_H
+#define _CHAN_SEND_ITER_H
 
 #include <iterator>
 
@@ -33,3 +34,5 @@ public:
   }
 };
 } // namespace chan
+
+#endif

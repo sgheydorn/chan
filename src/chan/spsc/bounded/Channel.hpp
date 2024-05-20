@@ -1,4 +1,5 @@
-#pragma once
+#ifndef _CHAN_SPSC_BOUNDED_CHANNEL_H
+#define _CHAN_SPSC_BOUNDED_CHANNEL_H
 
 #include <atomic>
 #include <memory>
@@ -86,3 +87,5 @@ private:
   }
 };
 } // namespace chan::spsc::bounded
+
+#endif

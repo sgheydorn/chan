@@ -1,4 +1,5 @@
-#pragma once
+#ifndef _CHAN_MPSC_UNBOUNDED_RECEIVER_H
+#define _CHAN_MPSC_UNBOUNDED_RECEIVER_H
 
 #include <memory>
 
@@ -111,3 +112,5 @@ public:
   std::default_sentinel_t end() { return {}; }
 };
 } // namespace chan::mpsc::unbounded
+
+#endif

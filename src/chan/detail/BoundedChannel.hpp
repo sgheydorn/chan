@@ -1,4 +1,5 @@
-#pragma once
+#ifndef _CHAN_DETAIL_BOUNDED_CHANNEL
+#define _CHAN_DETAIL_BOUNDED_CHANNEL
 
 #include <expected>
 
@@ -134,3 +135,5 @@ template <typename Self, typename T> struct BoundedChannel {
   }
 };
 } // namespace chan::detail
+
+#endif
