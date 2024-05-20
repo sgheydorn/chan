@@ -1,8 +1,8 @@
 #pragma once
 
 #include <atomic>
-#include <expected>
 #include <memory>
+#include <optional>
 #include <semaphore>
 #include <thread>
 

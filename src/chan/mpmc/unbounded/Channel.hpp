@@ -4,6 +4,7 @@
 #include <expected>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <semaphore>
 #include <thread>
 

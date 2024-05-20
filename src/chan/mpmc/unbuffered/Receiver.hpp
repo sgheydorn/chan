@@ -62,43 +62,6 @@ public:
     return result;
   }
 
-  std::expected<T, TryRecvError> try_recv() {
-    if (!this->channel) {
-      return std::nullopt;
-    }
-    auto item = this->channel->try_recv();
-    if (!item && item.error().is_disconnected()) {
-      this->disconnect();
-    }
-    return item;
-  }
-
-  template <typename Rep, typename Period>
-  std::expected<T, TryRecvError>
-  try_recv_for(const std::chrono::duration<Rep, Period> &timeout) {
-    if (!this->channel) {
-      return std::nullopt;
-    }
-    auto item = this->channel->try_recv_for(timeout);
-    if (!item && item.error().is_disconnected()) {
-      this->disconnect();
-    }
-    return item;
-  }
-
-  template <typename Clock, typename Duration>
-  std::expected<T, TryRecvError>
-  try_recv_until(const std::chrono::duration<Clock, Duration> &deadline) {
-    if (!this->channel) {
-      return std::nullopt;
-    }
-    auto item = this->channel->try_recv_until(deadline);
-    if (!item && item.error().is_disconnected()) {
-      this->disconnect();
-    }
-    return item;
-  }
-
   void disconnect() {
     this->release();
     this->channel = nullptr;

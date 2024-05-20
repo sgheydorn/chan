@@ -1,3 +1,5 @@
+#pragma once
+
 #include "Channel.hpp"
 #include "Receiver.hpp"
 #include "Sender.hpp"
