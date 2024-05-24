@@ -15,6 +15,7 @@
 
 namespace chan::mpmc::unbounded {
 template <typename T, std::size_t CHUNK_SIZE, typename A>
+  requires(CHUNK_SIZE != 0)
 class Channel : detail::UnboundedChannel<Channel<T, CHUNK_SIZE, A>, T> {
   friend class detail::UnboundedChannel<Channel, T>;
   template <typename, std::size_t, typename, typename> friend class Sender;
