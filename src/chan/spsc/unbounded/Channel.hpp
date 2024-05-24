@@ -41,12 +41,11 @@ public:
     auto chunk = this->head_chunk;
     auto index = this->head_index;
     while (chunk != this->tail_chunk || index != this->tail_index) {
-      if (index == CHUNK_SIZE) {
+      std::allocator_traits<A>::destroy(this->allocator, chunk->items + index);
+      if (++index == CHUNK_SIZE) {
         index = 0;
         chunk = chunk->next;
       }
-      std::allocator_traits<A>::destroy(this->allocator, chunk->items + index);
-      index += 1;
     }
 
     auto c = chunk->next;
@@ -64,9 +63,14 @@ private:
       return std::unexpected(SendError(std::move(item)));
     }
     auto size = this->size.fetch_add(1, std::memory_order::acquire);
-    if (this->tail_index == CHUNK_SIZE) {
+    std::allocator_traits<A>::construct(
+        this->allocator, this->tail_chunk->items + this->tail_index,
+        std::move(item));
+    if (this->tail_index != CHUNK_SIZE - 1) {
+      ++this->tail_index;
+    } else {
       this->tail_index = 0;
-      if (size <= this->capacity - CHUNK_SIZE) {
+      if (size < this->capacity - CHUNK_SIZE) {
         this->tail_chunk = this->tail_chunk->next;
       } else {
         auto new_chunk = std::allocator_traits<A>::allocate(this->allocator, 1);
@@ -76,10 +80,6 @@ private:
         this->capacity += CHUNK_SIZE;
       }
     }
-    std::allocator_traits<A>::construct(
-        this->allocator, this->tail_chunk->items + this->tail_index,
-        std::move(item));
-    this->tail_index += 1;
     this->recv_ready.release();
     return {};
   }
@@ -88,14 +88,15 @@ private:
     if (this->size.load(std::memory_order::relaxed) == 0) {
       return {};
     }
-    if (this->head_index == CHUNK_SIZE) {
-      this->head_index = 0;
-      this->head_chunk = this->head_chunk->next;
-    }
     auto &chan_item = this->head_chunk->items[this->head_index];
     auto item = std::move(chan_item);
     std::allocator_traits<A>::destroy(this->allocator, &chan_item);
-    this->head_index += 1;
+    if (this->head_index != CHUNK_SIZE - 1) {
+      ++this->head_index;
+    } else {
+      this->head_index = 0;
+      this->head_chunk = this->head_chunk->next;
+    }
     this->size.fetch_sub(1, std::memory_order::release);
     return item;
   }

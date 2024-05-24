@@ -59,13 +59,12 @@ public:
     auto chunk = this->head_chunk;
     auto index = this->head_index;
     while (chunk != this->tail_chunk || index != this->tail_index) {
-      if (index == CHUNK_SIZE) {
+      std::allocator_traits<A>::destroy(this->allocator,
+                                        chunk->packets + index);
+      if (++index == CHUNK_SIZE) {
         index = 0;
         chunk = chunk->next;
       }
-      std::allocator_traits<A>::destroy(this->allocator,
-                                        chunk->packets + index);
-      index += 1;
     }
 
     auto c = chunk->next;
@@ -86,10 +85,13 @@ private:
     Packet<T> *packet;
     {
       std::lock_guard _lock(this->tail_position_mutex);
-      if (this->tail_index == CHUNK_SIZE) {
+      packet = &this->tail_chunk->packets[this->tail_index];
+      if (this->tail_index != CHUNK_SIZE - 1) {
+        ++this->tail_index;
+      } else {
         this->tail_index = 0;
         auto capacity = this->capacity.load(std::memory_order::relaxed);
-        if (size <= capacity - CHUNK_SIZE) {
+        if (size < capacity - CHUNK_SIZE) {
           this->tail_chunk = this->tail_chunk->next;
         } else {
           auto new_chunk =
@@ -107,8 +109,6 @@ private:
                                std::memory_order::relaxed);
         }
       }
-      packet = &this->tail_chunk->packets[this->tail_index];
-      this->tail_index += 1;
     }
     while (!packet->write_ready.exchange(false, std::memory_order::acquire)) {
       std::this_thread::yield();
@@ -134,12 +134,13 @@ private:
     Packet<T> *packet;
     {
       std::lock_guard _lock(this->head_position_mutex);
-      if (this->head_index == CHUNK_SIZE) {
+      packet = &this->head_chunk->packets[this->head_index];
+      if (this->head_index != CHUNK_SIZE - 1) {
+        ++this->head_index;
+      } else {
         this->head_index = 0;
         this->head_chunk = this->head_chunk->next;
       }
-      packet = &this->head_chunk->packets[this->head_index];
-      this->head_index += 1;
     }
     while (!packet->read_ready.exchange(false, std::memory_order::acquire)) {
       std::this_thread::yield();
