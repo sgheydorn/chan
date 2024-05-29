@@ -82,7 +82,7 @@ private:
     if (this->disconnected.load(std::memory_order::relaxed)) {
       return std::unexpected(SendError(std::move(item)));
     }
-    auto size = this->size.fetch_add(1, std::memory_order::relaxed);
+    auto size = this->size.fetch_add(1, std::memory_order::acquire);
     Packet<T> *packet;
     {
       std::lock_guard _lock(this->tail_position_mutex);
@@ -120,19 +120,14 @@ private:
   }
 
   std::optional<T> recv_impl() {
-    std::size_t size;
-    do {
-      size = this->size.load(std::memory_order::relaxed);
-    } while (size != 0 && !this->size.compare_exchange_weak(
-                              size, size - 1, std::memory_order::relaxed));
-
-    if (size == 0) {
-      return {};
-    }
-
     Packet<T> *packet;
     {
       std::lock_guard _lock(this->head_position_mutex);
+      if (this->receiver_count.load(std::memory_order::relaxed) == 0 &&
+          this->head_chunk == this->tail_chunk &&
+          this->head_index == this->tail_index) {
+        return {};
+      }
       packet = &this->head_chunk->packets[this->head_index];
       if (this->head_index != CHUNK_SIZE - 1) {
         ++this->head_index;
@@ -147,6 +142,7 @@ private:
     auto item = std::move(packet->item);
     std::allocator_traits<A>::destroy(this->allocator, &packet->item);
     packet->write_ready.store(true, std::memory_order::release);
+    this->size.fetch_sub(1, std::memory_order::release);
     return item;
   }
 
