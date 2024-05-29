@@ -146,6 +146,7 @@ private:
     if (this->receiver_count.fetch_sub(1, std::memory_order::acq_rel) != 1) {
       return false;
     }
+    this->recv_done.store(true, std::memory_order::relaxed);
     auto sender_count =
         this->sender_count.exchange(0, std::memory_order::relaxed);
     this->send_ready.release(sender_count);
