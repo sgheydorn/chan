@@ -68,7 +68,7 @@ public:
 
   std::expected<T, TryRecvError> try_recv() {
     if (!this->channel) {
-      return std::nullopt;
+      return std::unexpected(TryRecvError{TryRecvErrorKind::Disconnected});
     }
     auto item = this->channel->try_recv();
     if (!item && item.error().is_disconnected()) {
@@ -81,7 +81,7 @@ public:
   std::expected<T, TryRecvError>
   try_recv_for(const std::chrono::duration<Rep, Period> &timeout) {
     if (!this->channel) {
-      return std::nullopt;
+      return std::unexpected(TryRecvError{TryRecvErrorKind::Disconnected});
     }
     auto item = this->channel->try_recv_for(timeout);
     if (!item && item.error().is_disconnected()) {
@@ -92,9 +92,9 @@ public:
 
   template <typename Clock, typename Duration>
   std::expected<T, TryRecvError>
-  try_recv_until(const std::chrono::duration<Clock, Duration> &deadline) {
+  try_recv_until(const std::chrono::time_point<Clock, Duration> &deadline) {
     if (!this->channel) {
-      return std::nullopt;
+      return std::unexpected(TryRecvError{TryRecvErrorKind::Disconnected});
     }
     auto item = this->channel->try_recv_until(deadline);
     if (!item && item.error().is_disconnected()) {

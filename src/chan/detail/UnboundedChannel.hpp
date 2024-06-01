@@ -46,7 +46,7 @@ template <typename Self, typename T> struct UnboundedChannel {
 
   template <typename Clock, typename Duration>
   std::expected<T, TryRecvError>
-  try_recv_until(const std::chrono::duration<Clock, Duration> &deadline) {
+  try_recv_until(const std::chrono::time_point<Clock, Duration> &deadline) {
     if (!static_cast<Self *>(this)->recv_ready.try_acquire_until(deadline)) {
       return std::unexpected(TryRecvError(TryRecvErrorKind::Empty));
     }

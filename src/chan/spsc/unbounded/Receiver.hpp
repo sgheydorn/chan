@@ -82,7 +82,7 @@ public:
 
   template <typename Clock, typename Duration>
   std::expected<T, TryRecvError>
-  try_recv_until(const std::chrono::duration<Clock, Duration> &deadline) {
+  try_recv_until(const std::chrono::time_point<Clock, Duration> &deadline) {
     if (!this->channel) {
       return std::unexpected(TryRecvError(TryRecvErrorKind::Disconnected));
     }

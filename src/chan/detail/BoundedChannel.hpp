@@ -22,7 +22,6 @@ template <typename Self, typename T> struct BoundedChannel {
     }
   }
 
-  template <typename Rep, typename Period>
   std::expected<void, TrySendError<T>> try_send(T item) {
     if (!static_cast<Self *>(this)->send_ready.try_acquire()) {
       return std::unexpected(
@@ -120,7 +119,7 @@ template <typename Self, typename T> struct BoundedChannel {
 
   template <typename Clock, typename Duration>
   std::expected<T, TryRecvError>
-  try_recv_until(const std::chrono::duration<Clock, Duration> &deadline) {
+  try_recv_until(const std::chrono::time_point<Clock, Duration> &deadline) {
     if (!static_cast<Self *>(this)->recv_ready.try_acquire_until(deadline)) {
       return std::unexpected(TryRecvError(TryRecvErrorKind::Empty));
     }
