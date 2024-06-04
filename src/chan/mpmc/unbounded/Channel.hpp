@@ -82,10 +82,10 @@ private:
     if (this->disconnected.load(std::memory_order::relaxed)) {
       return std::unexpected(SendError(std::move(item)));
     }
-    auto size = this->size.fetch_add(1, std::memory_order::acquire);
     Packet<T> *packet;
     {
       std::lock_guard _lock(this->tail_position_mutex);
+      auto size = this->size.fetch_add(1, std::memory_order::acquire);
       packet = &this->tail_chunk->packets[this->tail_index];
       if (this->tail_index != CHUNK_SIZE - 1) {
         ++this->tail_index;
