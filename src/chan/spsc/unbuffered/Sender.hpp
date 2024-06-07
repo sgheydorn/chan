@@ -44,7 +44,7 @@ public:
 
   std::expected<void, SendError<T>> send(T item) {
     if (!this->channel) {
-      return std::unexpected(SendError(std::move(item)));
+      return std::unexpected(SendError{std::move(item)});
     }
     auto result = this->channel->send(std::move(item));
     if (!result) {
@@ -56,7 +56,7 @@ public:
   std::expected<void, TrySendError<T>> try_send(T item) {
     if (!this->channel) {
       return std::unexpected(
-          TrySendError(TrySendErrorKind::Disconnected, std::move(item)));
+          TrySendError{TrySendErrorKind::Disconnected, std::move(item)});
     }
     auto result = this->channel->try_send(std::move(item));
     if (!result && result.error().is_disconnected()) {
@@ -70,7 +70,7 @@ public:
   try_send_for(T item, const std::chrono::duration<Rep, Period> &timeout) {
     if (!this->channel) {
       return std::unexpected(
-          TrySendError(TrySendErrorKind::Disconnected, std::move(item)));
+          TrySendError{TrySendErrorKind::Disconnected, std::move(item)});
     }
     auto result = this->channel->try_send_for(std::move(item), timeout);
     if (!result && result.error().is_disconnected()) {
@@ -85,7 +85,7 @@ public:
                  const std::chrono::time_point<Clock, Duration> &deadline) {
     if (!this->channel) {
       return std::unexpected(
-          TrySendError(TrySendErrorKind::Disconnected, std::move(item)));
+          TrySendError{TrySendErrorKind::Disconnected, std::move(item)});
     }
     auto result = this->channel->try_send_until(std::move(item), deadline);
     if (!result && result.error().is_disconnected()) {

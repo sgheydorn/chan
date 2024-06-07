@@ -16,14 +16,14 @@ template <typename Self, typename T> struct UnbufferedChannel {
     if (ok) {
       return {};
     } else {
-      return std::unexpected(SendError(std::move(item)));
+      return std::unexpected(SendError{std::move(item)});
     }
   }
 
   std::expected<void, TrySendError<T>> try_send(T item) {
     if (!static_cast<Self *>(this)->send_ready.try_acquire()) {
       return std::unexpected(
-          TrySendError(TrySendErrorKind::Full, std::move(item)));
+          TrySendError{TrySendErrorKind::Full, std::move(item)});
     }
     auto ok = static_cast<Self *>(this)->send_impl(item);
     static_cast<Self *>(this)->recv_ready.release();
@@ -32,7 +32,7 @@ template <typename Self, typename T> struct UnbufferedChannel {
       return {};
     } else {
       return std::unexpected(
-          TrySendError(TrySendErrorKind::Disconnected, std::move(item)));
+          TrySendError{TrySendErrorKind::Disconnected, std::move(item)});
     }
   }
 
@@ -41,7 +41,7 @@ template <typename Self, typename T> struct UnbufferedChannel {
   try_send_for(T item, const std::chrono::duration<Rep, Period> &timeout) {
     if (!static_cast<Self *>(this)->send_ready.try_acquire_for(timeout)) {
       return std::unexpected(
-          TrySendError(TrySendErrorKind::Full, std::move(item)));
+          TrySendError{TrySendErrorKind::Full, std::move(item)});
     }
     auto ok = static_cast<Self *>(this)->send_impl(item);
     static_cast<Self *>(this)->recv_ready.release();
@@ -50,7 +50,7 @@ template <typename Self, typename T> struct UnbufferedChannel {
       return {};
     } else {
       return std::unexpected(
-          TrySendError(TrySendErrorKind::Disconnected, std::move(item)));
+          TrySendError{TrySendErrorKind::Disconnected, std::move(item)});
     }
   }
 
@@ -60,7 +60,7 @@ template <typename Self, typename T> struct UnbufferedChannel {
                  const std::chrono::time_point<Clock, Duration> &deadline) {
     if (!static_cast<Self *>(this)->send_ready.try_acquire_until(deadline)) {
       return std::unexpected(
-          TrySendError(TrySendErrorKind::Full, std::move(item)));
+          TrySendError{TrySendErrorKind::Full, std::move(item)});
     }
     auto ok = static_cast<Self *>(this)->send_impl(item);
     static_cast<Self *>(this)->recv_ready.release();
@@ -69,7 +69,7 @@ template <typename Self, typename T> struct UnbufferedChannel {
       return {};
     } else {
       return std::unexpected(
-          TrySendError(TrySendErrorKind::Disconnected, std::move(item)));
+          TrySendError{TrySendErrorKind::Disconnected, std::move(item)});
     }
   }
 };

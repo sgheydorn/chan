@@ -56,7 +56,7 @@ public:
 
   std::expected<T, RecvError> recv() {
     if (!this->channel) {
-      return std::unexpected(RecvError());
+      return std::unexpected(RecvError{});
     }
     auto result = this->channel->recv();
     if (!result) {

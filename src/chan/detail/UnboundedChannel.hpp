@@ -14,19 +14,19 @@ template <typename Self, typename T> struct UnboundedChannel {
     if (item) {
       return std::move(*item);
     } else {
-      return std::unexpected(RecvError());
+      return std::unexpected(RecvError{});
     }
   }
 
   std::expected<T, TryRecvError> try_recv() {
     if (!static_cast<Self *>(this)->recv_ready.try_acquire()) {
-      return std::unexpected(TryRecvError(TryRecvErrorKind::Empty));
+      return std::unexpected(TryRecvError{TryRecvErrorKind::Empty});
     }
     auto item = static_cast<Self *>(this)->recv_impl();
     if (item) {
       return std::move(*item);
     } else {
-      return std::unexpected(TryRecvError(TryRecvErrorKind::Disconnected));
+      return std::unexpected(TryRecvError{TryRecvErrorKind::Disconnected});
     }
   }
 
@@ -34,13 +34,13 @@ template <typename Self, typename T> struct UnboundedChannel {
   std::expected<T, TryRecvError>
   try_recv_for(const std::chrono::duration<Rep, Period> &timeout) {
     if (!static_cast<Self *>(this)->recv_ready.try_acquire_for(timeout)) {
-      return std::unexpected(TryRecvError(TryRecvErrorKind::Empty));
+      return std::unexpected(TryRecvError{TryRecvErrorKind::Empty});
     }
     auto item = static_cast<Self *>(this)->recv_impl();
     if (item) {
       return std::move(*item);
     } else {
-      return std::unexpected(TryRecvError(TryRecvErrorKind::Disconnected));
+      return std::unexpected(TryRecvError{TryRecvErrorKind::Disconnected});
     }
   }
 
@@ -48,13 +48,13 @@ template <typename Self, typename T> struct UnboundedChannel {
   std::expected<T, TryRecvError>
   try_recv_until(const std::chrono::time_point<Clock, Duration> &deadline) {
     if (!static_cast<Self *>(this)->recv_ready.try_acquire_until(deadline)) {
-      return std::unexpected(TryRecvError(TryRecvErrorKind::Empty));
+      return std::unexpected(TryRecvError{TryRecvErrorKind::Empty});
     }
     auto item = static_cast<Self *>(this)->recv_impl();
     if (item) {
       return std::move(*item);
     } else {
-      return std::unexpected(TryRecvError(TryRecvErrorKind::Disconnected));
+      return std::unexpected(TryRecvError{TryRecvErrorKind::Disconnected});
     }
   }
 };

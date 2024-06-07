@@ -57,7 +57,7 @@ public:
 
   std::expected<void, SendError<T>> send(T item) {
     if (!this->channel) {
-      return std::unexpected(SendError(std::move(item)));
+      return std::unexpected(SendError{std::move(item)});
     }
     auto result = this->channel->send(std::move(item));
     if (!result) {

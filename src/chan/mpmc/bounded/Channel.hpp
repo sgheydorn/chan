@@ -13,7 +13,7 @@
 namespace chan::mpmc::bounded {
 template <typename T, typename A>
 class Channel : detail::BoundedChannel<Channel<T, A>, T> {
-  friend class detail::BoundedChannel<Channel, T>;
+  friend struct detail::BoundedChannel<Channel, T>;
   template <typename, typename, typename> friend class Sender;
   template <typename, typename, typename> friend class Receiver;
 

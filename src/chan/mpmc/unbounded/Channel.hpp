@@ -17,7 +17,7 @@ namespace chan::mpmc::unbounded {
 template <typename T, std::size_t CHUNK_SIZE, typename A>
   requires(CHUNK_SIZE != 0)
 class Channel : detail::UnboundedChannel<Channel<T, CHUNK_SIZE, A>, T> {
-  friend class detail::UnboundedChannel<Channel, T>;
+  friend struct detail::UnboundedChannel<Channel, T>;
   template <typename, std::size_t, typename, typename> friend class Sender;
   template <typename, std::size_t, typename, typename> friend class Receiver;
 
@@ -80,7 +80,7 @@ public:
 private:
   std::expected<void, SendError<T>> send(T item) {
     if (this->disconnected.load(std::memory_order::relaxed)) {
-      return std::unexpected(SendError(std::move(item)));
+      return std::unexpected(SendError{std::move(item)});
     }
     Packet<T> *packet;
     {

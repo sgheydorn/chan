@@ -47,7 +47,7 @@ public:
 
   std::expected<T, RecvError> recv() {
     if (!this->channel) {
-      return std::unexpected(RecvError());
+      return std::unexpected(RecvError{});
     }
     auto result = this->channel->recv();
     if (!result) {
@@ -58,7 +58,7 @@ public:
 
   std::expected<T, TryRecvError> try_recv() {
     if (!this->channel) {
-      return std::unexpected(TryRecvError(TryRecvErrorKind::Disconnected));
+      return std::unexpected(TryRecvError{TryRecvErrorKind::Disconnected});
     }
     auto result = this->channel->try_recv();
     if (!result && result.error().is_disconnected()) {
@@ -71,7 +71,7 @@ public:
   std::expected<T, TryRecvError>
   try_recv_for(const std::chrono::duration<Rep, Period> &timeout) {
     if (!this->channel) {
-      return std::unexpected(TryRecvError(TryRecvErrorKind::Disconnected));
+      return std::unexpected(TryRecvError{TryRecvErrorKind::Disconnected});
     }
     auto result = this->channel->try_recv_for(timeout);
     if (!result && result.error().is_disconnected()) {
@@ -84,7 +84,7 @@ public:
   std::expected<T, TryRecvError>
   try_recv_until(const std::chrono::time_point<Clock, Duration> &deadline) {
     if (!this->channel) {
-      return std::unexpected(TryRecvError(TryRecvErrorKind::Disconnected));
+      return std::unexpected(TryRecvError{TryRecvErrorKind::Disconnected});
     }
     auto result = this->channel->try_recv_until(deadline);
     if (!result && result.error().is_disconnected()) {

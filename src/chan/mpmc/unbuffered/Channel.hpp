@@ -11,7 +11,7 @@
 
 namespace chan::mpmc::unbuffered {
 template <typename T> class Channel : detail::UnbufferedChannel<Channel<T>, T> {
-  friend class detail::UnbufferedChannel<Channel, T>;
+  friend struct detail::UnbufferedChannel<Channel, T>;
   template <typename, typename> friend class Sender;
   template <typename, typename> friend class Receiver;
 
@@ -46,7 +46,7 @@ private:
     this->send_ready.release();
     this->recv_ready.acquire();
     if (!packet) {
-      return std::unexpected(RecvError());
+      return std::unexpected(RecvError{});
     }
     return std::move(*packet);
   }
