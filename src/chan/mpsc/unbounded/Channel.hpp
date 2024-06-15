@@ -6,10 +6,10 @@
 #include <memory>
 #include <mutex>
 #include <optional>
-#include <semaphore>
 #include <thread>
 
 #include "../../SendError.hpp"
+#include "../../detail/SemaphoreType.hpp"
 #include "../../detail/UnboundedChannel.hpp"
 #include "PacketChunk.hpp"
 
@@ -33,7 +33,7 @@ class Channel : detail::UnboundedChannel<Channel<T, CHUNK_SIZE, A>, T> {
   std::atomic_size_t size;
   std::size_t capacity;
 
-  std::counting_semaphore<> recv_ready;
+  detail::SemaphoreType recv_ready;
 
   std::atomic_size_t sender_count;
   std::atomic_bool disconnected;

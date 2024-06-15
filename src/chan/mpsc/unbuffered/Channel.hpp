@@ -4,9 +4,9 @@
 #include <atomic>
 #include <expected>
 #include <optional>
-#include <semaphore>
 
 #include "../../RecvError.hpp"
+#include "../../detail/SemaphoreType.hpp"
 #include "../../detail/UnbufferedChannel.hpp"
 
 namespace chan::mpsc::unbuffered {
@@ -16,8 +16,8 @@ template <typename T> class Channel : detail::UnbufferedChannel<Channel<T>, T> {
   template <typename, typename> friend class Receiver;
 
   std::atomic<std::optional<T> *> packet;
-  std::counting_semaphore<> send_ready;
-  std::counting_semaphore<2> recv_ready;
+  detail::SemaphoreType send_ready;
+  detail::SemaphoreType recv_ready;
   std::atomic_size_t sender_count;
   std::atomic_bool disconnected;
 

@@ -5,9 +5,9 @@
 #include <expected>
 #include <memory>
 #include <optional>
-#include <semaphore>
 
 #include "../../SendError.hpp"
+#include "../../detail/SemaphoreType.hpp"
 #include "../../detail/UnboundedChannel.hpp"
 #include "ItemChunk.hpp"
 
@@ -26,7 +26,7 @@ class Channel : detail::UnboundedChannel<Channel<T, CHUNK_SIZE, A>, T> {
   std::size_t head_index;
   std::atomic_size_t size;
   std::size_t capacity;
-  std::counting_semaphore<> recv_ready;
+  detail::SemaphoreType recv_ready;
   std::atomic_bool disconnected;
 
 public:

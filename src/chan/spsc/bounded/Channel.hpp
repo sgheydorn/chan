@@ -4,9 +4,9 @@
 #include <atomic>
 #include <memory>
 #include <optional>
-#include <semaphore>
 
 #include "../../detail/BoundedChannel.hpp"
+#include "../../detail/SemaphoreType.hpp"
 
 namespace chan::spsc::bounded {
 template <typename T, typename A>
@@ -21,8 +21,8 @@ class Channel : detail::BoundedChannel<Channel<T, A>, T> {
   std::size_t head_index;
   std::size_t tail_index;
   std::atomic_size_t size;
-  std::counting_semaphore<> send_ready;
-  std::counting_semaphore<> recv_ready;
+  detail::SemaphoreType send_ready;
+  detail::SemaphoreType recv_ready;
   std::atomic_bool recv_done;
   std::atomic_bool disconnected;
 

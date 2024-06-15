@@ -4,10 +4,10 @@
 #include <atomic>
 #include <memory>
 #include <optional>
-#include <semaphore>
 #include <thread>
 
 #include "../../detail/BoundedChannel.hpp"
+#include "../../detail/SemaphoreType.hpp"
 #include "../Packet.hpp"
 
 namespace chan::mpmc::bounded {
@@ -23,8 +23,8 @@ class Channel : detail::BoundedChannel<Channel<T, A>, T> {
   std::atomic_size_t head_index;
   std::atomic_size_t tail_index;
   std::atomic_size_t size;
-  std::counting_semaphore<> send_ready;
-  std::counting_semaphore<> recv_ready;
+  detail::SemaphoreType send_ready;
+  detail::SemaphoreType recv_ready;
   std::atomic_size_t sender_count;
   std::atomic_size_t receiver_count;
   std::atomic_bool recv_done;
