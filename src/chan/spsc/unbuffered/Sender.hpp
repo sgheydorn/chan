@@ -46,11 +46,7 @@ public:
     if (!this->channel) {
       return std::unexpected(SendError{std::move(item)});
     }
-    auto result = this->channel->send(std::move(item));
-    if (!result) {
-      this->disconnect();
-    }
-    return result;
+    return this->channel->send(std::move(item));
   }
 
   std::expected<void, TrySendError<T>> try_send(T item) {
@@ -58,11 +54,7 @@ public:
       return std::unexpected(
           TrySendError{TrySendErrorKind::Disconnected, std::move(item)});
     }
-    auto result = this->channel->try_send(std::move(item));
-    if (!result && result.error().is_disconnected()) {
-      this->disconnect();
-    }
-    return result;
+    return this->channel->try_send(std::move(item));
   }
 
   template <typename Rep, typename Period>
@@ -72,11 +64,7 @@ public:
       return std::unexpected(
           TrySendError{TrySendErrorKind::Disconnected, std::move(item)});
     }
-    auto result = this->channel->try_send_for(std::move(item), timeout);
-    if (!result && result.error().is_disconnected()) {
-      this->disconnect();
-    }
-    return result;
+    return this->channel->try_send_for(std::move(item), timeout);
   }
 
   template <typename Clock, typename Duration>
@@ -87,11 +75,7 @@ public:
       return std::unexpected(
           TrySendError{TrySendErrorKind::Disconnected, std::move(item)});
     }
-    auto result = this->channel->try_send_until(std::move(item), deadline);
-    if (!result && result.error().is_disconnected()) {
-      this->disconnect();
-    }
-    return result;
+    return this->channel->try_send_until(std::move(item), deadline);
   }
 
   void disconnect() {

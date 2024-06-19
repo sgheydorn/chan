@@ -7,16 +7,18 @@
 #include "Channel.hpp"
 
 namespace chan::mpmc::unbuffered {
-template <typename T, typename A = std::allocator<Channel<T>>> class Receiver {
+template <typename T, typename A1 = std::allocator<std::optional<T> *>,
+          typename A2 = std::allocator<Channel<T, A1>>>
+class Receiver {
 public:
   using Item = T;
 
 private:
-  std::allocator_traits<A>::pointer channel;
-  A allocator;
+  std::allocator_traits<A2>::pointer channel;
+  A2 allocator;
 
 public:
-  Receiver(std::allocator_traits<A>::pointer channel, A allocator)
+  Receiver(std::allocator_traits<A2>::pointer channel, A2 allocator)
       : channel(std::move(channel)), allocator(std::move(allocator)) {}
 
   Receiver() : channel(nullptr), allocator() {}
@@ -56,11 +58,32 @@ public:
     if (!this->channel) {
       return std::unexpected(RecvError{});
     }
-    auto result = this->channel->recv();
-    if (!result) {
-      this->disconnect();
+    return this->channel->recv();
+  }
+
+  std::expected<T, TryRecvError> try_recv() {
+    if (!this->channel) {
+      return std::unexpected(TryRecvError{TryRecvErrorKind::Disconnected});
     }
-    return result;
+    return this->channel->try_recv();
+  }
+
+  template <typename Rep, typename Period>
+  std::expected<T, TryRecvError>
+  try_recv_for(const std::chrono::duration<Rep, Period> &timeout) {
+    if (!this->channel) {
+      return std::unexpected(TryRecvError{TryRecvErrorKind::Disconnected});
+    }
+    return this->channel->try_recv_for(timeout);
+  }
+
+  template <typename Clock, typename Duration>
+  std::expected<T, TryRecvError>
+  try_recv_until(const std::chrono::time_point<Clock, Duration> &deadline) {
+    if (!this->channel) {
+      return std::unexpected(TryRecvError{TryRecvErrorKind::Disconnected});
+    }
+    return this->channel->try_recv_until(deadline);
   }
 
   void disconnect() {
@@ -70,15 +93,15 @@ public:
 
 private:
   void acquire() {
-    if (this->channel && !this->channel->acquire_receiver()) {
-      this->channel = nullptr;
+    if (this->channel) {
+      this->channel->acquire_receiver();
     }
   }
 
   void release() {
     if (this->channel && this->channel->release_receiver()) {
-      std::allocator_traits<A>::destroy(this->allocator, this->channel);
-      std::allocator_traits<A>::deallocate(this->allocator, this->channel, 1);
+      std::allocator_traits<A2>::destroy(this->allocator, this->channel);
+      std::allocator_traits<A2>::deallocate(this->allocator, this->channel, 1);
     }
   }
 

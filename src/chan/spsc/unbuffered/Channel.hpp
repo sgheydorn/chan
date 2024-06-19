@@ -2,57 +2,239 @@
 #define _CHAN_SPSC_UNBUFFERED_CHANNEL_H
 
 #include <atomic>
+#include <condition_variable>
 #include <expected>
 #include <optional>
 
 #include "../../RecvError.hpp"
-#include "../../detail/SemaphoreType.hpp"
-#include "../../detail/UnbufferedChannel.hpp"
+#include "../../SendError.hpp"
+#include "../../TryRecvError.hpp"
+#include "../../TrySendError.hpp"
 
 namespace chan::spsc::unbuffered {
-template <typename T> class Channel : detail::UnbufferedChannel<Channel<T>, T> {
-  friend struct detail::UnbufferedChannel<Channel, T>;
+template <typename T> class Channel {
   template <typename, typename> friend class Sender;
   template <typename, typename> friend class Receiver;
 
-  std::atomic<std::optional<T> *> packet;
-  detail::SemaphoreType send_ready;
-  detail::SemaphoreType recv_ready;
+  std::optional<T> *send_packet;
+  std::optional<T> *recv_packet;
+  bool send_done;
+  bool recv_done;
+  std::mutex packet_mutex;
+  std::condition_variable send_ready;
+  std::condition_variable recv_ready;
+
   std::atomic_bool disconnected;
 
 public:
   Channel()
-      : packet(nullptr), send_ready(0), recv_ready(0), disconnected(false) {}
+      : send_packet(nullptr), recv_packet(nullptr), send_done(false),
+        recv_done(false), disconnected(false) {}
 
 private:
-  bool send_impl(T &item) {
-    auto packet = this->packet.exchange(nullptr, std::memory_order::relaxed);
-    if (packet) {
-      *packet = std::move(item);
-      return true;
+  std::expected<void, SendError<T>> send(T item) {
+    std::unique_lock lock(this->packet_mutex);
+    if (this->recv_packet) {
+      this->recv_packet->emplace(std::move(item));
+      this->recv_packet = nullptr;
+      lock.unlock();
+      this->recv_ready.notify_all();
     } else {
-      return false;
+      std::optional<T> packet(std::move(item));
+      this->send_packet = &packet;
+      this->send_ready.wait(
+          lock, [this, &packet] { return !packet || this->recv_done; });
+      lock.unlock();
+      if (packet) {
+        return std::unexpected(SendError{std::move(*packet)});
+      }
     }
+    return {};
+  }
+
+  std::expected<void, TrySendError<T>> try_send(T item) {
+    std::unique_lock lock(this->packet_mutex);
+    if (this->recv_done) {
+      return std::unexpected(
+          TrySendError{TrySendErrorKind::Disconnected, std::move(item)});
+    }
+    if (!this->recv_packet) {
+      return std::unexpected(
+          TrySendError{TrySendErrorKind::Full, std::move(item)});
+    }
+    this->recv_packet->emplace(std::move(item));
+    this->recv_packet = nullptr;
+    lock.unlock();
+    this->recv_ready.notify_all();
+    return {};
+  }
+
+  template <typename Rep, typename Period>
+  std::expected<void, TrySendError<T>>
+  try_send_for(T item, const std::chrono::duration<Rep, Period> &timeout) {
+    std::unique_lock lock(this->packet_mutex);
+    if (this->recv_packet) {
+      this->recv_packet->emplace(std::move(item));
+      this->recv_packet = nullptr;
+      lock.unlock();
+      this->recv_ready.notify_all();
+    } else {
+      std::optional<T> packet(std::move(item));
+      this->send_packet = &packet;
+      if (!this->send_ready.wait_for(lock, timeout, [this, &packet] {
+            return !packet || this->recv_done;
+          })) {
+        this->send_packet = nullptr;
+        return std::unexpected(
+            TrySendError{TrySendErrorKind::Full, std::move(*packet)});
+      }
+      lock.unlock();
+      if (packet) {
+        return std::unexpected(
+            TrySendError{TrySendErrorKind::Disconnected, std::move(*packet)});
+      }
+    }
+    return {};
+  }
+
+  template <typename Clock, typename Duration>
+  std::expected<void, TrySendError<T>>
+  try_send_until(T item,
+                 const std::chrono::time_point<Clock, Duration> &deadline) {
+    std::unique_lock lock(this->packet_mutex);
+    if (this->recv_packet) {
+      this->recv_packet->emplace(std::move(item));
+      this->recv_packet = nullptr;
+      lock.unlock();
+      this->recv_ready.notify_all();
+    } else {
+      std::optional<T> packet(std::move(item));
+      this->send_packet = &packet;
+      if (!this->send_ready.wait_until(lock, deadline, [this, &packet] {
+            return !packet || this->recv_done;
+          })) {
+        this->send_packet = nullptr;
+        return std::unexpected(
+            TrySendError{TrySendErrorKind::Full, std::move(*packet)});
+      }
+      lock.unlock();
+      if (packet) {
+        return std::unexpected(
+            TrySendError{TrySendErrorKind::Disconnected, std::move(*packet)});
+      }
+    }
+    return {};
   }
 
   std::expected<T, RecvError> recv() {
-    std::optional<T> packet;
-    this->packet.store(&packet, std::memory_order::relaxed);
-    this->send_ready.release();
-    this->recv_ready.acquire();
-    if (!packet) {
-      return std::unexpected(RecvError{});
+    std::unique_lock lock(this->packet_mutex);
+    if (this->send_packet) {
+      auto item = std::move(**this->send_packet);
+      this->send_packet->reset();
+      this->send_packet = nullptr;
+      lock.unlock();
+      this->send_ready.notify_all();
+      return item;
+    } else {
+      std::optional<T> packet;
+      this->recv_packet = &packet;
+      this->recv_ready.wait(
+          lock, [this, &packet] { return packet || this->send_done; });
+      lock.unlock();
+      if (!packet) {
+        return std::unexpected(RecvError{});
+      }
+      return std::move(*packet);
     }
-    return std::move(*packet);
+  }
+
+  std::expected<T, TryRecvError> try_recv() {
+    std::unique_lock lock(this->packet_mutex);
+    if (this->send_done) {
+      return std::unexpected(TryRecvError{TryRecvErrorKind::Disconnected});
+    }
+    if (!this->send_packet) {
+      return std::unexpected(TryRecvError{TryRecvErrorKind::Empty});
+    }
+    auto item = std::move(**this->send_packet);
+    this->send_packet->reset();
+    this->send_packet = nullptr;
+    lock.unlock();
+    this->send_ready.notify_all();
+    return item;
+  }
+
+  template <typename Rep, typename Period>
+  std::expected<T, TryRecvError>
+  try_recv_for(const std::chrono::duration<Rep, Period> &timeout) {
+    std::unique_lock lock(this->packet_mutex);
+    if (this->send_packet) {
+      auto item = std::move(**this->send_packet);
+      this->send_packet->reset();
+      this->send_packet = nullptr;
+      lock.unlock();
+      this->send_ready.notify_all();
+      return item;
+    } else {
+      std::optional<T> packet;
+      this->recv_packet = &packet;
+      if (!this->recv_ready.wait_for(lock, timeout, [this, &packet] {
+            return packet || this->send_done;
+          })) {
+        this->recv_packet = nullptr;
+        return std::unexpected(TryRecvError{TryRecvErrorKind::Empty});
+      }
+      lock.unlock();
+      if (!packet) {
+        return std::unexpected(TryRecvError{TryRecvErrorKind::Disconnected});
+      }
+      return std::move(*packet);
+    }
+  }
+
+  template <typename Clock, typename Duration>
+  std::expected<T, TryRecvError>
+  try_recv_until(const std::chrono::time_point<Clock, Duration> &deadline) {
+    std::unique_lock lock(this->packet_mutex);
+    if (this->send_packet) {
+      auto item = std::move(**this->send_packet);
+      this->send_packet->reset();
+      this->send_packet = nullptr;
+      lock.unlock();
+      this->send_ready.notify_all();
+      return item;
+    } else {
+      std::optional<T> packet;
+      this->recv_packet = &packet;
+      if (!this->recv_ready.wait_until(lock, deadline, [this, &packet] {
+            return packet || this->send_done;
+          })) {
+        this->recv_packet = nullptr;
+        return std::unexpected(TryRecvError{TryRecvErrorKind::Empty});
+      }
+      lock.unlock();
+      if (!packet) {
+        return std::unexpected(TryRecvError{TryRecvErrorKind::Disconnected});
+      }
+      return std::move(*packet);
+    }
   }
 
   bool release_sender() {
-    this->recv_ready.release();
+    {
+      std::lock_guard _lock(this->packet_mutex);
+      this->send_done = true;
+    }
+    this->recv_ready.notify_all();
     return this->disconnected.exchange(true, std::memory_order::relaxed);
   }
 
   bool release_receiver() {
-    this->send_ready.release();
+    {
+      std::lock_guard _lock(this->packet_mutex);
+      this->recv_done = true;
+    }
+    this->send_ready.notify_all();
     return this->disconnected.exchange(true, std::memory_order::relaxed);
   }
 };

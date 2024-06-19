@@ -7,16 +7,18 @@
 #include "Channel.hpp"
 
 namespace chan::mpmc::unbuffered {
-template <typename T, typename A = std::allocator<Channel<T>>> class Sender {
+template <typename T, typename A1 = std::allocator<std::optional<T> *>,
+          typename A2 = std::allocator<Channel<T, A1>>>
+class Sender {
 public:
   using Item = T;
 
 private:
-  std::allocator_traits<A>::pointer channel;
-  A allocator;
+  std::allocator_traits<A2>::pointer channel;
+  A2 allocator;
 
 public:
-  Sender(std::allocator_traits<A>::pointer channel, A allocator)
+  Sender(std::allocator_traits<A2>::pointer channel, A2 allocator)
       : channel(std::move(channel)), allocator(std::move(allocator)) {}
 
   Sender() : channel(nullptr), allocator() {}
@@ -56,11 +58,7 @@ public:
     if (!this->channel) {
       return std::unexpected(SendError{std::move(item)});
     }
-    auto result = this->channel->send(std::move(item));
-    if (!result) {
-      this->disconnect();
-    }
-    return result;
+    return this->channel->send(std::move(item));
   }
 
   std::expected<void, TrySendError<T>> try_send(T item) {
@@ -68,11 +66,7 @@ public:
       return std::unexpected(
           TrySendError{TrySendErrorKind::Disconnected, std::move(item)});
     }
-    auto result = this->channel->try_send(std::move(item));
-    if (!result && result.error().is_disconnected()) {
-      this->disconnect();
-    }
-    return result;
+    return this->channel->try_send(std::move(item));
   }
 
   template <typename Rep, typename Period>
@@ -82,11 +76,7 @@ public:
       return std::unexpected(
           TrySendError{TrySendErrorKind::Disconnected, std::move(item)});
     }
-    auto result = this->channel->try_send_for(std::move(item), timeout);
-    if (!result && result.error().is_disconnected()) {
-      this->disconnect();
-    }
-    return result;
+    return this->channel->try_send_for(std::move(item), timeout);
   }
 
   template <typename Clock, typename Duration>
@@ -97,11 +87,7 @@ public:
       return std::unexpected(
           TrySendError{TrySendErrorKind::Disconnected, std::move(item)});
     }
-    auto result = this->channel->try_send_until(std::move(item), deadline);
-    if (!result && result.error().is_disconnected()) {
-      this->disconnect();
-    }
-    return result;
+    return this->channel->try_send_until(std::move(item), deadline);
   }
 
   void disconnect() {
@@ -111,15 +97,15 @@ public:
 
 private:
   void acquire() {
-    if (this->channel && !this->channel->acquire_sender()) {
-      this->channel = nullptr;
+    if (this->channel) {
+      this->channel->acquire_sender();
     }
   }
 
   void release() {
     if (this->channel && this->channel->release_sender()) {
-      std::allocator_traits<A>::destroy(this->allocator, this->channel);
-      std::allocator_traits<A>::deallocate(this->allocator, this->channel, 1);
+      std::allocator_traits<A2>::destroy(this->allocator, this->channel);
+      std::allocator_traits<A2>::deallocate(this->allocator, this->channel, 1);
     }
   }
 
