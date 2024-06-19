@@ -124,7 +124,7 @@ private:
     Packet<T> *packet;
     {
       std::lock_guard _lock(this->head_position_mutex);
-      if (this->sender_count.load(std::memory_order::relaxed) == 0 &&
+      if (this->send_done.load(std::memory_order::relaxed) &&
           this->head_chunk == this->tail_chunk &&
           this->head_index == this->tail_index) {
         return {};
