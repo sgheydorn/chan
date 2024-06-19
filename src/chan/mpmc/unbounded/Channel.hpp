@@ -38,6 +38,7 @@ class Channel : detail::UnboundedChannel<Channel<T, CHUNK_SIZE, A>, T> {
 
   std::atomic_size_t sender_count;
   std::atomic_size_t receiver_count;
+  std::atomic_bool send_done;
   std::atomic_bool disconnected;
 
 public:
@@ -46,7 +47,7 @@ public:
         tail_chunk(std::allocator_traits<A>::allocate(this->allocator, 1)),
         tail_index(0), head_chunk(this->tail_chunk), head_index(0), size(0),
         capacity(CHUNK_SIZE), recv_ready(0), sender_count(1), receiver_count(1),
-        disconnected(false) {
+        send_done(false), disconnected(false) {
     for (auto &packet : this->tail_chunk->packets) {
       std::allocator_traits<A>::construct(this->allocator, &packet.read_ready,
                                           false);
@@ -151,22 +152,20 @@ private:
   }
 
   bool acquire_receiver() {
-    std::size_t receiver_count;
-    do {
-      receiver_count = this->receiver_count.load(std::memory_order::relaxed);
-    } while (receiver_count != 0 && !this->receiver_count.compare_exchange_weak(
-                                        receiver_count, receiver_count + 1,
-                                        std::memory_order::relaxed));
-    return receiver_count != 0;
+    if (this->send_done.load(std::memory_order::relaxed)) {
+      return false;
+    }
+    this->receiver_count.fetch_add(1, std::memory_order::relaxed);
+    return true;
   }
 
   bool release_sender() {
     if (this->sender_count.fetch_sub(1, std::memory_order::acq_rel) != 1) {
       return false;
     }
-    auto receiver_count =
-        this->receiver_count.exchange(0, std::memory_order::relaxed);
-    this->recv_ready.release(receiver_count);
+    this->send_done.store(true, std::memory_order::relaxed);
+    auto receiver_count = this->receiver_count.load(std::memory_order::relaxed);
+    this->recv_ready.release(receiver_count * 2);
     return this->disconnected.exchange(true, std::memory_order::relaxed);
   }
 

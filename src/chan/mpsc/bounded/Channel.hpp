@@ -95,13 +95,11 @@ private:
   }
 
   bool acquire_sender() {
-    std::size_t sender_count;
-    do {
-      sender_count = this->sender_count.load(std::memory_order::relaxed);
-    } while (sender_count != 0 &&
-             !this->sender_count.compare_exchange_weak(
-                 sender_count, sender_count + 1, std::memory_order::relaxed));
-    return sender_count != 0;
+    if (this->recv_done.load(std::memory_order::relaxed)) {
+      return false;
+    }
+    this->sender_count.fetch_add(1, std::memory_order::relaxed);
+    return true;
   }
 
   bool release_sender() {
@@ -114,9 +112,8 @@ private:
 
   bool release_receiver() {
     this->recv_done.store(true, std::memory_order::relaxed);
-    auto sender_count =
-        this->sender_count.exchange(0, std::memory_order::relaxed);
-    this->send_ready.release(sender_count);
+    auto sender_count = this->sender_count.load(std::memory_order::relaxed);
+    this->send_ready.release(sender_count * 2);
     return this->disconnected.exchange(true, std::memory_order::relaxed);
   }
 };
