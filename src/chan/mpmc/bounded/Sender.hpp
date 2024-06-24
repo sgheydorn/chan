@@ -75,6 +75,12 @@ public:
     return this->channel->try_send_until(std::move(item), deadline);
   }
 
+  std::size_t channel_size() {
+    return this->channel->size.load(std::memory_order::relaxed);
+  }
+
+  std::size_t channel_capacity() { return this->channel->capacity; }
+
   void disconnect() {
     this->release();
     this->channel = nullptr;

@@ -62,6 +62,12 @@ public:
     return this->channel->try_recv_until(deadline);
   }
 
+  std::size_t channel_size() {
+    return this->channel->size.load(std::memory_order::relaxed);
+  }
+
+  std::size_t channel_capacity() { return this->channel->capacity; }
+
   void disconnect() {
     this->release();
     this->channel = nullptr;

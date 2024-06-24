@@ -31,7 +31,7 @@ class Channel : detail::UnboundedChannel<Channel<T, CHUNK_SIZE, A>, T> {
   std::size_t head_index;
 
   std::atomic_size_t size;
-  std::size_t capacity;
+  std::atomic_size_t capacity;
 
   detail::SemaphoreType recv_ready;
 
@@ -88,7 +88,8 @@ private:
         ++this->tail_index;
       } else {
         this->tail_index = 0;
-        if (size < this->capacity - CHUNK_SIZE) {
+        if (size <
+            this->capacity.load(std::memory_order::relaxed) - CHUNK_SIZE) {
           this->tail_chunk = this->tail_chunk->next;
         } else {
           auto new_chunk =
@@ -100,7 +101,7 @@ private:
           new_chunk->next = this->tail_chunk->next;
           this->tail_chunk->next = new_chunk;
           this->tail_chunk = new_chunk;
-          this->capacity += CHUNK_SIZE;
+          this->capacity.fetch_add(CHUNK_SIZE, std::memory_order::relaxed);
         }
       }
     }

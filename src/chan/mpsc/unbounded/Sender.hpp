@@ -59,6 +59,14 @@ public:
     return this->channel->send(std::move(item));
   }
 
+  std::size_t channel_size() {
+    return this->channel->size.load(std::memory_order::relaxed);
+  }
+
+  std::size_t channel_capacity() {
+    return this->channel->capacity.load(std::memory_order::relaxed);
+  }
+
   void disconnect() {
     this->release();
     this->channel = nullptr;
