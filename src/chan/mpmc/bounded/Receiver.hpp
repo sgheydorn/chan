@@ -54,52 +54,22 @@ public:
     return *this;
   }
 
-  std::expected<T, RecvError> recv() {
-    if (!this->channel) {
-      return std::unexpected(RecvError{});
-    }
-    auto result = this->channel->recv();
-    if (!result) {
-      this->disconnect();
-    }
-    return result;
-  }
+  std::expected<T, RecvError> recv() const { return this->channel->recv(); }
 
-  std::expected<T, TryRecvError> try_recv() {
-    if (!this->channel) {
-      return std::unexpected(TryRecvError{TryRecvErrorKind::Disconnected});
-    }
-    auto item = this->channel->try_recv();
-    if (!item && item.error().is_disconnected()) {
-      this->disconnect();
-    }
-    return item;
+  std::expected<T, TryRecvError> try_recv() const {
+    return this->channel->try_recv();
   }
 
   template <typename Rep, typename Period>
   std::expected<T, TryRecvError>
-  try_recv_for(const std::chrono::duration<Rep, Period> &timeout) {
-    if (!this->channel) {
-      return std::unexpected(TryRecvError{TryRecvErrorKind::Disconnected});
-    }
-    auto item = this->channel->try_recv_for(timeout);
-    if (!item && item.error().is_disconnected()) {
-      this->disconnect();
-    }
-    return item;
+  try_recv_for(const std::chrono::duration<Rep, Period> &timeout) const {
+    return this->channel->try_recv_for(timeout);
   }
 
   template <typename Clock, typename Duration>
-  std::expected<T, TryRecvError>
-  try_recv_until(const std::chrono::time_point<Clock, Duration> &deadline) {
-    if (!this->channel) {
-      return std::unexpected(TryRecvError{TryRecvErrorKind::Disconnected});
-    }
-    auto item = this->channel->try_recv_until(deadline);
-    if (!item && item.error().is_disconnected()) {
-      this->disconnect();
-    }
-    return item;
+  std::expected<T, TryRecvError> try_recv_until(
+      const std::chrono::time_point<Clock, Duration> &deadline) const {
+    return this->channel->try_recv_until(deadline);
   }
 
   void disconnect() {
@@ -109,8 +79,8 @@ public:
 
 private:
   void acquire() {
-    if (this->channel && !this->channel->acquire_receiver()) {
-      this->channel = nullptr;
+    if (this->channel) {
+      this->channel->acquire_receiver();
     }
   }
 
@@ -122,7 +92,7 @@ private:
   }
 
 public:
-  chan::RecvIter<Receiver> begin() { return chan::RecvIter<Receiver>(*this); }
+  RecvIter<Receiver> begin() const { return RecvIter<Receiver>(*this); }
 
   std::default_sentinel_t end() { return {}; }
 };

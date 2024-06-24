@@ -36,6 +36,7 @@ class Channel : detail::UnboundedChannel<Channel<T, CHUNK_SIZE, A>, T> {
   detail::SemaphoreType recv_ready;
 
   std::atomic_size_t sender_count;
+  std::atomic_bool send_done;
   std::atomic_bool disconnected;
 
 public:
@@ -43,7 +44,7 @@ public:
       : allocator(std::move(allocator)),
         tail_chunk(std::allocator_traits<A>::allocate(this->allocator, 1)),
         tail_index(0), head_chunk(this->tail_chunk), head_index(0), size(0),
-        capacity(CHUNK_SIZE), recv_ready(0), sender_count(1),
+        capacity(CHUNK_SIZE), recv_ready(0), sender_count(1), send_done(false),
         disconnected(false) {
     for (auto &packet : this->tail_chunk->packets) {
       std::allocator_traits<A>::construct(this->allocator, &packet.ready,
@@ -138,6 +139,7 @@ private:
     if (this->sender_count.fetch_sub(1, std::memory_order::acq_rel) != 1) {
       return false;
     }
+    this->send_done.store(true, std::memory_order::relaxed);
     this->recv_ready.release();
     return this->disconnected.exchange(true, std::memory_order::relaxed);
   }

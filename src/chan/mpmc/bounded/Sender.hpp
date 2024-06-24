@@ -54,56 +54,25 @@ public:
     return *this;
   }
 
-  std::expected<void, SendError<T>> send(T item) {
-    if (!this->channel) {
-      return std::unexpected(SendError{std::move(item)});
-    }
-    auto result = this->channel->send(std::move(item));
-    if (!result) {
-      this->disconnect();
-    }
-    return result;
+  std::expected<void, SendError<T>> send(T item) const {
+    return this->channel->send(std::move(item));
   }
 
-  std::expected<void, TrySendError<T>> try_send(T item) {
-    if (!this->channel) {
-      return std::unexpected(
-          TrySendError{TrySendErrorKind::Disconnected, std::move(item)});
-    }
-    auto result = this->channel->try_send(std::move(item));
-    if (!result && result.error().is_disconnected()) {
-      this->disconnect();
-    }
-    return result;
+  std::expected<void, TrySendError<T>> try_send(T item) const {
+    return this->channel->try_send(std::move(item));
   }
 
   template <typename Rep, typename Period>
   std::expected<void, TrySendError<T>>
-  try_send_for(T item, const std::chrono::duration<Rep, Period> &timeout) {
-    if (!this->channel) {
-      return std::unexpected(
-          TrySendError{TrySendErrorKind::Disconnected, std::move(item)});
-    }
-    auto result = this->channel->try_send_for(std::move(item), timeout);
-    if (!result && result.error().is_disconnected()) {
-      this->disconnect();
-    }
-    return result;
+  try_send_for(T item,
+               const std::chrono::duration<Rep, Period> &timeout) const {
+    return this->channel->try_send_for(std::move(item), timeout);
   }
 
   template <typename Clock, typename Duration>
-  std::expected<void, TrySendError<T>>
-  try_send_until(T item,
-                 const std::chrono::time_point<Clock, Duration> &deadline) {
-    if (!this->channel) {
-      return std::unexpected(
-          TrySendError{TrySendErrorKind::Disconnected, std::move(item)});
-    }
-    auto result = this->channel->try_send_until(std::move(item), deadline);
-    if (!result && result.error().is_disconnected()) {
-      this->disconnect();
-    }
-    return result;
+  std::expected<void, TrySendError<T>> try_send_until(
+      T item, const std::chrono::time_point<Clock, Duration> &deadline) const {
+    return this->channel->try_send_until(std::move(item), deadline);
   }
 
   void disconnect() {
@@ -113,8 +82,8 @@ public:
 
 private:
   void acquire() {
-    if (this->channel && !this->channel->acquire_sender()) {
-      this->channel = nullptr;
+    if (this->channel) {
+      this->channel->acquire_sender();
     }
   }
 
@@ -126,9 +95,9 @@ private:
   }
 
 public:
-  chan::SendIter<Sender> begin() { return chan::SendIter(*this); }
+  SendIter<Sender> begin() const { return SendIter(*this); }
 
-  std::default_sentinel_t end() { return {}; }
+  std::default_sentinel_t end() const { return {}; }
 };
 } // namespace chan::mpmc::bounded
 

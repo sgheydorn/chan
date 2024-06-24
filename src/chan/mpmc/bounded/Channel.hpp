@@ -62,11 +62,7 @@ public:
   }
 
 private:
-  bool send_impl(T &item) {
-    if (this->recv_done.load(std::memory_order::relaxed)) {
-      return false;
-    }
-
+  void send_impl(T item) {
     std::size_t tail_index;
     do {
       tail_index = this->tail_index.load(std::memory_order::relaxed);
@@ -81,21 +77,9 @@ private:
     std::allocator_traits<A>::construct(this->allocator, &packet.item,
                                         std::move(item));
     packet.read_ready.store(true, std::memory_order::release);
-    this->size.fetch_add(1, std::memory_order::relaxed);
-    return true;
   }
 
-  std::optional<T> recv_impl() {
-    std::size_t size;
-    do {
-      size = this->size.load(std::memory_order::relaxed);
-    } while (size != 0 && !this->size.compare_exchange_weak(
-                              size, size - 1, std::memory_order::relaxed));
-
-    if (size == 0) {
-      return {};
-    }
-
+  T recv_impl() {
     std::size_t head_index;
     do {
       head_index = this->head_index.load(std::memory_order::relaxed);
@@ -113,20 +97,12 @@ private:
     return item;
   }
 
-  bool acquire_sender() {
-    if (this->recv_done.load(std::memory_order::relaxed)) {
-      return false;
-    }
+  void acquire_sender() {
     this->sender_count.fetch_add(1, std::memory_order::relaxed);
-    return true;
   }
 
-  bool acquire_receiver() {
-    if (this->send_done.load(std::memory_order::relaxed)) {
-      return false;
-    }
+  void acquire_receiver() {
     this->receiver_count.fetch_add(1, std::memory_order::relaxed);
-    return receiver_count != 0;
   }
 
   bool release_sender() {
@@ -135,7 +111,7 @@ private:
     }
     this->send_done.store(true, std::memory_order::relaxed);
     auto receiver_count = this->receiver_count.load(std::memory_order::relaxed);
-    this->recv_ready.release(receiver_count * 2);
+    this->recv_ready.release(receiver_count);
     return this->disconnected.exchange(true, std::memory_order::relaxed);
   }
 
@@ -145,7 +121,7 @@ private:
     }
     this->recv_done.store(true, std::memory_order::relaxed);
     auto sender_count = this->sender_count.load(std::memory_order::relaxed);
-    this->send_ready.release(sender_count * 2);
+    this->send_ready.release(sender_count);
     return this->disconnected.exchange(true, std::memory_order::relaxed);
   }
 };

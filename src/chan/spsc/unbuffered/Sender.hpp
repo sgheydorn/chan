@@ -42,39 +42,24 @@ public:
   Sender(const Sender &) = delete;
   Sender &operator=(const Sender &) = delete;
 
-  std::expected<void, SendError<T>> send(T item) {
-    if (!this->channel) {
-      return std::unexpected(SendError{std::move(item)});
-    }
+  std::expected<void, SendError<T>> send(T item) const {
     return this->channel->send(std::move(item));
   }
 
-  std::expected<void, TrySendError<T>> try_send(T item) {
-    if (!this->channel) {
-      return std::unexpected(
-          TrySendError{TrySendErrorKind::Disconnected, std::move(item)});
-    }
+  std::expected<void, TrySendError<T>> try_send(T item) const {
     return this->channel->try_send(std::move(item));
   }
 
   template <typename Rep, typename Period>
   std::expected<void, TrySendError<T>>
-  try_send_for(T item, const std::chrono::duration<Rep, Period> &timeout) {
-    if (!this->channel) {
-      return std::unexpected(
-          TrySendError{TrySendErrorKind::Disconnected, std::move(item)});
-    }
+  try_send_for(T item,
+               const std::chrono::duration<Rep, Period> &timeout) const {
     return this->channel->try_send_for(std::move(item), timeout);
   }
 
   template <typename Clock, typename Duration>
-  std::expected<void, TrySendError<T>>
-  try_send_until(T item,
-                 const std::chrono::time_point<Clock, Duration> &deadline) {
-    if (!this->channel) {
-      return std::unexpected(
-          TrySendError{TrySendErrorKind::Disconnected, std::move(item)});
-    }
+  std::expected<void, TrySendError<T>> try_send_until(
+      T item, const std::chrono::time_point<Clock, Duration> &deadline) const {
     return this->channel->try_send_until(std::move(item), deadline);
   }
 
@@ -92,9 +77,9 @@ private:
   }
 
 public:
-  chan::SendIter<Sender> begin() { return chan::SendIter(*this); }
+  SendIter<Sender> begin() const { return SendIter(*this); }
 
-  std::default_sentinel_t end() { return {}; }
+  std::default_sentinel_t end() const { return {}; }
 };
 } // namespace chan::spsc::unbuffered
 

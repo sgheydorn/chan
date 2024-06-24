@@ -10,11 +10,11 @@ public:
   using difference_type = std::ptrdiff_t;
 
 private:
-  S *sender;
+  const S *sender;
   bool disconnected;
 
 public:
-  SendIter(S &sender) : sender(&sender) {}
+  SendIter(const S &sender) : sender(&sender) {}
 
   SendIter &operator=(S::Item item) {
     if (!this->sender->send(std::move(item))) {

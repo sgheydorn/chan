@@ -151,12 +151,8 @@ private:
     this->sender_count.fetch_add(1, std::memory_order::relaxed);
   }
 
-  bool acquire_receiver() {
-    if (this->send_done.load(std::memory_order::relaxed)) {
-      return false;
-    }
+  void acquire_receiver() {
     this->receiver_count.fetch_add(1, std::memory_order::relaxed);
-    return true;
   }
 
   bool release_sender() {
@@ -165,7 +161,7 @@ private:
     }
     this->send_done.store(true, std::memory_order::relaxed);
     auto receiver_count = this->receiver_count.load(std::memory_order::relaxed);
-    this->recv_ready.release(receiver_count * 2);
+    this->recv_ready.release(receiver_count);
     return this->disconnected.exchange(true, std::memory_order::relaxed);
   }
 

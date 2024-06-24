@@ -23,6 +23,7 @@ class Channel : detail::BoundedChannel<Channel<T, A>, T> {
   std::atomic_size_t size;
   detail::SemaphoreType send_ready;
   detail::SemaphoreType recv_ready;
+  std::atomic_bool send_done;
   std::atomic_bool recv_done;
   std::atomic_bool disconnected;
 
@@ -32,7 +33,7 @@ public:
         item_buffer(
             std::allocator_traits<A>::allocate(this->allocator, capacity)),
         capacity(capacity), head_index(0), tail_index(0), size(0),
-        send_ready(capacity), recv_ready(0), recv_done(false),
+        send_ready(capacity), recv_ready(0), send_done(false), recv_done(false),
         disconnected(false) {}
 
   ~Channel() {
@@ -49,23 +50,15 @@ public:
   }
 
 private:
-  bool send_impl(T &item) {
-    if (this->recv_done.load(std::memory_order::relaxed)) {
-      return false;
-    }
+  void send_impl(T item) {
     std::allocator_traits<A>::construct(
         this->allocator, this->item_buffer + this->tail_index, std::move(item));
     if (++this->tail_index == this->capacity) {
       this->tail_index = 0;
     }
-    this->size.fetch_add(1, std::memory_order::relaxed);
-    return true;
   }
 
-  std::optional<T> recv_impl() {
-    if (this->size.fetch_sub(1, std::memory_order::relaxed) == 0) {
-      return {};
-    }
+  T recv_impl() {
     auto &chan_item = this->item_buffer[this->head_index];
     auto item = std::move(chan_item);
     std::allocator_traits<A>::destroy(this->allocator, &chan_item);
@@ -76,6 +69,7 @@ private:
   }
 
   bool release_sender() {
+    this->send_done.store(true, std::memory_order::relaxed);
     this->recv_ready.release();
     return this->disconnected.exchange(true, std::memory_order::relaxed);
   }

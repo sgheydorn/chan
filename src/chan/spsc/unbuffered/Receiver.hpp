@@ -42,35 +42,21 @@ public:
   Receiver(const Receiver &) = delete;
   Receiver &operator=(const Receiver &) = delete;
 
-  std::expected<T, RecvError> recv() {
-    if (!this->channel) {
-      return std::unexpected(RecvError{});
-    }
-    return this->channel->recv();
-  }
+  std::expected<T, RecvError> recv() const { return this->channel->recv(); }
 
-  std::expected<T, TryRecvError> try_recv() {
-    if (!this->channel) {
-      return std::unexpected(TryRecvError{TryRecvErrorKind::Disconnected});
-    }
+  std::expected<T, TryRecvError> try_recv() const {
     return this->channel->try_recv();
   }
 
   template <typename Rep, typename Period>
   std::expected<T, TryRecvError>
-  try_recv_for(const std::chrono::duration<Rep, Period> &timeout) {
-    if (!this->channel) {
-      return std::unexpected(TryRecvError{TryRecvErrorKind::Disconnected});
-    }
+  try_recv_for(const std::chrono::duration<Rep, Period> &timeout) const {
     return this->channel->try_recv_for(timeout);
   }
 
   template <typename Clock, typename Duration>
-  std::expected<T, TryRecvError>
-  try_recv_until(const std::chrono::time_point<Clock, Duration> &deadline) {
-    if (!this->channel) {
-      return std::unexpected(TryRecvError{TryRecvErrorKind::Disconnected});
-    }
+  std::expected<T, TryRecvError> try_recv_until(
+      const std::chrono::time_point<Clock, Duration> &deadline) const {
     return this->channel->try_recv_until(deadline);
   }
 
@@ -88,9 +74,9 @@ private:
   }
 
 public:
-  chan::RecvIter<Receiver> begin() { return chan::RecvIter<Receiver>(*this); }
+  RecvIter<Receiver> begin() const { return RecvIter<Receiver>(*this); }
 
-  std::default_sentinel_t end() { return {}; }
+  std::default_sentinel_t end() const { return {}; }
 };
 } // namespace chan::spsc::unbuffered
 

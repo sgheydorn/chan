@@ -55,15 +55,8 @@ public:
     return *this;
   }
 
-  std::expected<void, SendError<T>> send(T item) {
-    if (!this->channel) {
-      return std::unexpected(SendError{std::move(item)});
-    }
-    auto result = this->channel->send(std::move(item));
-    if (!result) {
-      this->disconnect();
-    }
-    return result;
+  std::expected<void, SendError<T>> send(T item) const {
+    return this->channel->send(std::move(item));
   }
 
   void disconnect() {
@@ -86,9 +79,9 @@ private:
   }
 
 public:
-  chan::SendIter<Sender> begin() { return chan::SendIter(*this); }
+  SendIter<Sender> begin() const { return SendIter(*this); }
 
-  std::default_sentinel_t end() { return {}; }
+  std::default_sentinel_t end() const { return {}; }
 };
 } // namespace chan::mpmc::unbounded
 

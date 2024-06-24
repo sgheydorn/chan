@@ -14,14 +14,14 @@ public:
   using value_type = R::Item;
 
 private:
-  R *receiver;
+  const R *receiver;
   mutable std::optional<value_type> item;
 
-  RecvIter(R *receiver, std::optional<value_type> item)
+  RecvIter(const R *receiver, std::optional<value_type> item)
       : receiver(receiver), item(std::move(item)) {}
 
 public:
-  RecvIter(R &receiver)
+  RecvIter(const R &receiver)
       : receiver(&receiver),
         item(detail::expected_to_optional(receiver.recv())) {}
 

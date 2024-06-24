@@ -44,52 +44,22 @@ public:
   Receiver(const Receiver &) = delete;
   Receiver &operator=(const Receiver &) = delete;
 
-  std::expected<T, RecvError> recv() {
-    if (!this->channel) {
-      return std::unexpected(RecvError{});
-    }
-    auto result = this->channel->recv();
-    if (!result) {
-      this->disconnect();
-    }
-    return result;
-  }
+  std::expected<T, RecvError> recv() const { return this->channel->recv(); }
 
-  std::expected<T, TryRecvError> try_recv() {
-    if (!this->channel) {
-      return std::unexpected(TryRecvError{TryRecvErrorKind::Disconnected});
-    }
-    auto result = this->channel->try_recv();
-    if (!result && result.error().is_disconnected()) {
-      this->disconnect();
-    }
-    return result;
+  std::expected<T, TryRecvError> try_recv() const {
+    return this->channel->try_recv();
   }
 
   template <typename Rep, typename Period>
   std::expected<T, TryRecvError>
-  try_recv_for(const std::chrono::duration<Rep, Period> &timeout) {
-    if (!this->channel) {
-      return std::unexpected(TryRecvError{TryRecvErrorKind::Disconnected});
-    }
-    auto result = this->channel->try_recv_for(timeout);
-    if (!result && result.error().is_disconnected()) {
-      this->disconnect();
-    }
-    return result;
+  try_recv_for(const std::chrono::duration<Rep, Period> &timeout) const {
+    return this->channel->try_recv_for(timeout);
   }
 
   template <typename Clock, typename Duration>
-  std::expected<T, TryRecvError>
-  try_recv_until(const std::chrono::time_point<Clock, Duration> &deadline) {
-    if (!this->channel) {
-      return std::unexpected(TryRecvError{TryRecvErrorKind::Disconnected});
-    }
-    auto result = this->channel->try_recv_until(deadline);
-    if (!result && result.error().is_disconnected()) {
-      this->disconnect();
-    }
-    return result;
+  std::expected<T, TryRecvError> try_recv_until(
+      const std::chrono::time_point<Clock, Duration> &deadline) const {
+    return this->channel->try_recv_until(deadline);
   }
 
   void disconnect() {
@@ -106,9 +76,9 @@ private:
   }
 
 public:
-  chan::RecvIter<Receiver> begin() { return chan::RecvIter<Receiver>(*this); }
+  RecvIter<Receiver> begin() const { return RecvIter<Receiver>(*this); }
 
-  std::default_sentinel_t end() { return {}; }
+  std::default_sentinel_t end() const { return {}; }
 };
 } // namespace chan::spsc::bounded
 
