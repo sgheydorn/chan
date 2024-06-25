@@ -22,12 +22,7 @@ public:
   Sender(std::allocator_traits<A2>::pointer channel, A2 allocator)
       : channel(std::move(channel)), allocator(std::move(allocator)) {}
 
-  /// Create a `Sender` that is not connected to a channel.
-  ///
-  /// # Safety
-  /// Most method calls on a default constructed `Sender` result in undefined
-  /// behavior. The only safe operations are assignment, destruction, copy, and
-  /// calls to `disconnect`.
+  /// Create a null `Sender`.
   Sender() : channel(nullptr), allocator() {}
 
   ~Sender() { this->release(); }
@@ -61,14 +56,26 @@ public:
     return *this;
   }
 
+  /// Return `true` if `this` is not connected to a channel.
+  bool is_null() const { return this->channel == nullptr; }
+
+  /// Return `!is_null()`.
+  explicit operator bool() const { return !this->is_null(); }
+
   /// Send an item on the channel.
   ///
   /// Blocks until a receiver requests an item or all receivers disconnect.
+  ///
+  /// # Safety
+  /// Causes undefined behavior if `is_null()` is `true`.
   std::expected<void, SendError<T>> send(T item) const {
     return this->channel->send(std::move(item));
   }
 
   /// Send an item on the channel without blocking.
+  ///
+  /// # Safety
+  /// Causes undefined behavior if `is_null()` is `true`.
   std::expected<void, TrySendError<T>> try_send(T item) const {
     return this->channel->try_send(std::move(item));
   }
@@ -77,6 +84,9 @@ public:
   ///
   /// Blocks until a receiver requests an item, the timeout is met, or all
   /// receivers disconnect.
+  ///
+  /// # Safety
+  /// Causes undefined behavior if `is_null()` is `true`.
   template <typename Rep, typename Period>
   std::expected<void, TrySendError<T>>
   try_send_for(T item,
@@ -88,6 +98,9 @@ public:
   ///
   /// Blocks until a receiver requests an item, the deadline is met, or all
   /// receivers disconnect.
+  ///
+  /// # Safety
+  /// Causes undefined behavior if `is_null()` is `true`.
   template <typename Clock, typename Duration>
   std::expected<void, TrySendError<T>> try_send_until(
       T item, const std::chrono::time_point<Clock, Duration> &deadline) const {
@@ -97,11 +110,9 @@ public:
   /// Disconnect from the channel.
   ///
   /// There is often no need to call this function because the destructor will
-  /// do the same thing.
+  /// disconnect from the channel.
   ///
-  /// # Safety
-  /// After calling `disconnect`, a `Sender` has the same safety rules as a
-  /// default constructed `Sender`.
+  /// After calling this function, `is_null()` will be `true`.
   void disconnect() {
     this->release();
     this->channel = nullptr;

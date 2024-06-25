@@ -44,14 +44,26 @@ public:
   Sender(const Sender &) = delete;
   Sender &operator=(const Sender &) = delete;
 
+  /// Return `true` if `this` is not connected to a channel.
+  bool is_null() const { return this->channel == nullptr; }
+
+  /// Return `!is_null()`.
+  explicit operator bool() const { return !this->is_null(); }
+
   /// Send an item on the channel.
   ///
   /// Blocks until the receiver requests an item or the receiver disconnects.
+  ///
+  /// # Safety
+  /// Causes undefined behavior if `is_null()` is `true`.
   std::expected<void, SendError<T>> send(T item) const {
     return this->channel->send(std::move(item));
   }
 
   /// Send an item on the channel without blocking.
+  ///
+  /// # Safety
+  /// Causes undefined behavior if `is_null()` is `true`.
   std::expected<void, TrySendError<T>> try_send(T item) const {
     return this->channel->try_send(std::move(item));
   }
@@ -60,6 +72,9 @@ public:
   ///
   /// Blocks until the receiver requests an item, the timeout is met, or the
   /// receiver disconnects.
+  ///
+  /// # Safety
+  /// Causes undefined behavior if `is_null()` is `true`.
   template <typename Rep, typename Period>
   std::expected<void, TrySendError<T>>
   try_send_for(T item,
@@ -71,6 +86,9 @@ public:
   ///
   /// Blocks until the receiver requests an item, the deadline is met, or
   /// the receiver disconnects.
+  ///
+  /// # Safety
+  /// Causes undefined behavior if `is_null()` is `true`.
   template <typename Clock, typename Duration>
   std::expected<void, TrySendError<T>> try_send_until(
       T item, const std::chrono::time_point<Clock, Duration> &deadline) const {
@@ -80,11 +98,9 @@ public:
   /// Disconnect from the channel.
   ///
   /// There is often no need to call this function because the destructor will
-  /// do the same thing.
+  /// disconnect from the channel.
   ///
-  /// # Safety
-  /// After calling `disconnect`, a `Sender` has the same safety rules as a
-  /// default constructed `Sender`.
+  /// After calling this function, `is_null()` will be `true`.
   void disconnect() {
     this->release();
     this->channel = nullptr;

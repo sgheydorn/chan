@@ -22,12 +22,7 @@ public:
   Sender(std::allocator_traits<A2>::pointer channel, A2 allocator)
       : channel(std::move(channel)), allocator(std::move(allocator)) {}
 
-  /// Create a `Sender` that is not connected to a channel.
-  ///
-  /// # Safety
-  /// Most method calls on a default constructed `Sender` result in undefined
-  /// behavior. The only safe operations are assignment, destruction, copy, and
-  /// calls to `disconnect`.
+  /// Create a null `Sender`.
   Sender() : channel(nullptr), allocator() {}
 
   ~Sender() { this->release(); }
@@ -61,9 +56,18 @@ public:
     return *this;
   }
 
+  /// Return `true` if `this` is not connected to a channel.
+  bool is_null() const { return this->channel == nullptr; }
+
+  /// Return `!is_null()`.
+  explicit operator bool() const { return !this->is_null(); }
+
   /// Send an item on the channel.
   ///
   /// Blocks until the channel is not full or all receivers disconnect.
+  ///
+  /// # Safety
+  /// Causes undefined behavior if `is_null()` is `true`.
   std::expected<void, SendError<T>> send(T item) const {
     return this->channel->send(std::move(item));
   }
@@ -72,6 +76,9 @@ public:
   ///
   /// Because semaphore try_acquire operations may spuriously fail, this
   /// function may spuriously fail with `TrySendErrorKind::Full`.
+  ///
+  /// # Safety
+  /// Causes undefined behavior if `is_null()` is `true`.
   std::expected<void, TrySendError<T>> try_send(T item) const {
     return this->channel->try_send(std::move(item));
   }
@@ -80,6 +87,9 @@ public:
   ///
   /// Blocks until the channel is not full, the timeout is met, or all receivers
   /// disconnect.
+  ///
+  /// # Safety
+  /// Causes undefined behavior if `is_null()` is `true`.
   template <typename Rep, typename Period>
   std::expected<void, TrySendError<T>>
   try_send_for(T item,
@@ -91,6 +101,9 @@ public:
   ///
   /// Blocks until the channel is not full, the deadline is met, or all
   /// receivers disconnect.
+  ///
+  /// # Safety
+  /// Causes undefined behavior if `is_null()` is `true`.
   template <typename Clock, typename Duration>
   std::expected<void, TrySendError<T>> try_send_until(
       T item, const std::chrono::time_point<Clock, Duration> &deadline) const {
@@ -101,21 +114,25 @@ public:
   ///
   /// Since the channel's size could change at any moment, it should not be used
   /// to determine if a send operation will block/fail.
+  ///
+  /// # Safety
+  /// Causes undefined behavior if `is_null()` is `true`.
   std::size_t channel_size() const {
     return this->channel->size.load(std::memory_order::relaxed);
   }
 
   /// Number of items the channel has allocated space for.
+  ///
+  /// # Safety
+  /// Causes undefined behavior if `is_null()` is `true`.
   std::size_t channel_capacity() const { return this->channel->capacity; }
 
   /// Disconnect from the channel.
   ///
   /// There is often no need to call this function because the destructor will
-  /// do the same thing.
+  /// disconnect from the channel.
   ///
-  /// # Safety
-  /// After calling `disconnect`, a `Sender` has the same safety rules as a
-  /// default constructed `Sender`.
+  /// After calling this function, `is_null()` will be `true`.
   void disconnect() {
     this->release();
     this->channel = nullptr;

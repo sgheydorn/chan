@@ -23,12 +23,7 @@ public:
   Receiver(std::allocator_traits<A2>::pointer channel, A2 allocator)
       : channel(std::move(channel)), allocator(std::move(allocator)) {}
 
-  /// Create a `Receiver` that is not connected to a channel.
-  ///
-  /// # Safety
-  /// Most method calls on a default constructed `Receiver` result in undefined
-  /// behavior. The only safe operations are assignment, destruction, copy, and
-  /// calls to `disconnect`.
+  /// Create a null `Receiver`.
   Receiver() : channel(nullptr), allocator() {}
 
   ~Receiver() { this->release(); }
@@ -62,15 +57,27 @@ public:
     return *this;
   }
 
+  /// Return `true` if `this` is not connected to a channel.
+  bool is_null() const { return this->channel == nullptr; }
+
+  /// Return `!is_null()`.
+  explicit operator bool() const { return !this->is_null(); }
+
   /// Receive an item from the channel.
   ///
   /// Blocks until the channel is not empty or all senders disconnect.
+  ///
+  /// # Safety
+  /// Causes undefined behavior if `is_null()` is `true`.
   std::expected<T, RecvError> recv() const { return this->channel->recv(); }
 
   /// Receive an item from the channel without blocking.
   ///
   /// Because semaphore try_acquire operations may spuriously fail, this
   /// function may spuriously fail with `TryRecvErrorKind::Empty`.
+  ///
+  /// # Safety
+  /// Causes undefined behavior if `is_null()` is `true`.
   std::expected<T, TryRecvError> try_recv() const {
     return this->channel->try_recv();
   }
@@ -79,6 +86,9 @@ public:
   ///
   /// Blocks until the channel is not empty, the timeout is met, or all senders
   /// disconnect.
+  ///
+  /// # Safety
+  /// Causes undefined behavior if `is_null()` is `true`.
   template <typename Rep, typename Period>
   std::expected<T, TryRecvError>
   try_recv_for(const std::chrono::duration<Rep, Period> &timeout) const {
@@ -89,6 +99,9 @@ public:
   ///
   /// Blocks until the channel is not empty, the deadline is met, or all senders
   /// disconnect.
+  ///
+  /// # Safety
+  /// Causes undefined behavior if `is_null()` is `true`.
   template <typename Clock, typename Duration>
   std::expected<T, TryRecvError> try_recv_until(
       const std::chrono::time_point<Clock, Duration> &deadline) const {
@@ -99,11 +112,17 @@ public:
   ///
   /// Since the channel's size could change at any moment, it should not be used
   /// to determine if a receive operation will block/fail.
+  ///
+  /// # Safety
+  /// Causes undefined behavior if `is_null()` is `true`.
   std::size_t channel_size() const {
     return this->channel->size.load(std::memory_order::relaxed);
   }
 
   /// Number of items the channel has allocated space for.
+  ///
+  /// # Safety
+  /// Causes undefined behavior if `is_null()` is `true`.
   std::size_t channel_capacity() const {
     return this->channel->capacity.load(std::memory_order::relaxed);
   }
@@ -111,11 +130,9 @@ public:
   /// Disconnect from the channel.
   ///
   /// There is often no need to call this function because the destructor will
-  /// do the same thing.
+  /// disconnect from the channel.
   ///
-  /// # Safety
-  /// After calling `disconnect`, a `Receiver` has the same safety rules as a
-  /// default constructed `Receiver`.
+  /// After calling this function, `is_null()` will be `true`.
   void disconnect() {
     this->release();
     this->channel = nullptr;
