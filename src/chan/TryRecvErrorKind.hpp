@@ -3,7 +3,16 @@
 
 namespace chan {
 enum class TryRecvErrorKind {
+  /// Channel currently has no items to receive.
+  ///
+  /// For unbuffered channels, this means there are no pending send operations.
+  ///
+  /// This is a transient.
   Empty,
+
+  /// Channel has no items to receive and there are no remaining senders.
+  ///
+  /// This is a permanent error.
   Disconnected,
 };
 }

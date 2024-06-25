@@ -7,6 +7,7 @@
 #include "Channel.hpp"
 
 namespace chan::mpsc::unbuffered {
+/// Receiving half of a channel.
 template <typename T, typename A1 = std::allocator<std::optional<T> *>,
           typename A2 = std::allocator<Channel<T, A1>>>
 class Receiver {
@@ -21,6 +22,12 @@ public:
   Receiver(std::allocator_traits<A2>::pointer channel, A2 allocator)
       : channel(std::move(channel)), allocator(std::move(allocator)) {}
 
+  /// Create a `Receiver` that is not connected to a channel.
+  ///
+  /// # Safety
+  /// Most method calls on a default constructed `Receiver` result in undefined
+  /// behavior. The only safe operations are assignment, destruction, and calls
+  /// to `disconnect`.
   Receiver() : channel(nullptr), allocator() {}
 
   ~Receiver() { this->release(); }
@@ -44,24 +51,44 @@ public:
   Receiver(const Receiver &) = delete;
   Receiver &operator=(const Receiver &) = delete;
 
+  /// Receive an item from the channel.
+  ///
+  /// Blocks until a sender sends an item or all senders disconnect.
   std::expected<T, RecvError> recv() const { return this->channel->recv(); }
 
+  /// Receive an item from the channel without blocking.
   std::expected<T, TryRecvError> try_recv() const {
     return this->channel->try_recv();
   }
 
+  /// Receive an item from the channel with a timeout.
+  ///
+  /// Blocks until a sender sends an item, the timeout is met, or all senders
+  /// disconnect.
   template <typename Rep, typename Period>
   std::expected<T, TryRecvError>
   try_recv_for(const std::chrono::duration<Rep, Period> &timeout) const {
     return this->channel->try_recv_for(timeout);
   }
 
+  /// Receive an item from the channel with a deadline.
+  ///
+  /// Blocks until a sender sends an item, the deadline is met, or all senders
+  /// disconnect.
   template <typename Clock, typename Duration>
   std::expected<T, TryRecvError> try_recv_until(
       const std::chrono::time_point<Clock, Duration> &deadline) const {
     return this->channel->try_recv_until(deadline);
   }
 
+  /// Disconnect from the channel.
+  ///
+  /// There is often no need to call this function because the destructor will
+  /// do the same thing.
+  ///
+  /// # Safety
+  /// After calling `disconnect`, a `Receiver` has the same safety rules as a
+  /// default constructed `Receiver`.
   void disconnect() {
     this->release();
     this->channel = nullptr;

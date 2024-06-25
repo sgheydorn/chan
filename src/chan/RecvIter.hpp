@@ -7,6 +7,7 @@
 #include "detail/expected_to_optional.hpp"
 
 namespace chan {
+/// Input iterator that receives items from a channel.
 template <typename R> class RecvIter {
 public:
   using iterator_category = std::input_iterator_tag;

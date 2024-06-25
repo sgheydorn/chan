@@ -7,6 +7,7 @@
 #include "Channel.hpp"
 
 namespace chan::mpmc::unbounded {
+/// Sending half of a channel.
 template <typename T, std::size_t CHUNK_SIZE = 16,
           typename A1 = std::allocator<PacketChunk<T, CHUNK_SIZE>>,
           typename A2 = std::allocator<Channel<T, CHUNK_SIZE, A1>>>
@@ -22,6 +23,12 @@ public:
   Sender(std::allocator_traits<A2>::pointer channel, A2 allocator)
       : channel(std::move(channel)), allocator(std::move(allocator)) {}
 
+  /// Create a `Sender` that is not connected to a channel.
+  ///
+  /// # Safety
+  /// Most method calls on a default constructed `Sender` result in undefined
+  /// behavior. The only safe operations are assignment, destruction, copy, and
+  /// calls to `disconnect`.
   Sender() : channel(nullptr), allocator() {}
 
   ~Sender() { this->release(); }
@@ -55,18 +62,31 @@ public:
     return *this;
   }
 
+  /// Send an item on the channel.
+  ///
+  /// Does not block.
   std::expected<void, SendError<T>> send(T item) const {
     return this->channel->send(std::move(item));
   }
 
-  std::size_t channel_size() {
+  /// Number of items in the channel.
+  std::size_t channel_size() const {
     return this->channel->size.load(std::memory_order::relaxed);
   }
 
-  std::size_t channel_capacity() {
+  /// Number of items the channel has allocated space for.
+  std::size_t channel_capacity() const {
     return this->channel->capacity.load(std::memory_order::relaxed);
   }
 
+  /// Disconnect from the channel.
+  ///
+  /// There is often no need to call this function because the destructor will
+  /// do the same thing.
+  ///
+  /// # Safety
+  /// After calling `disconnect`, a `Sender` has the same safety rules as a
+  /// default constructed `Sender`.
   void disconnect() {
     this->release();
     this->channel = nullptr;

@@ -4,6 +4,7 @@
 #include <iterator>
 
 namespace chan {
+/// Output iterator that sends items on a channel.
 template <typename S> class SendIter {
 public:
   using iterator_category = std::output_iterator_tag;

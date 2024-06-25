@@ -7,6 +7,7 @@
 #include "Channel.hpp"
 
 namespace chan::spsc::unbuffered {
+/// Sending half of a channel.
 template <typename T, typename A = std::allocator<Channel<T>>> class Sender {
 public:
   using Item = T;
@@ -19,6 +20,7 @@ public:
   Sender(std::allocator_traits<A>::pointer channel, A allocator)
       : channel(std::move(channel)), allocator(std::move(allocator)) {}
 
+  /// Create a null `Sender`.
   Sender() : channel(nullptr), allocator() {}
 
   ~Sender() { this->release(); }
@@ -42,14 +44,22 @@ public:
   Sender(const Sender &) = delete;
   Sender &operator=(const Sender &) = delete;
 
+  /// Send an item on the channel.
+  ///
+  /// Blocks until the receiver requests an item or the receiver disconnects.
   std::expected<void, SendError<T>> send(T item) const {
     return this->channel->send(std::move(item));
   }
 
+  /// Send an item on the channel without blocking.
   std::expected<void, TrySendError<T>> try_send(T item) const {
     return this->channel->try_send(std::move(item));
   }
 
+  /// Send an item on the channel with a timeout.
+  ///
+  /// Blocks until the receiver requests an item, the timeout is met, or the
+  /// receiver disconnects.
   template <typename Rep, typename Period>
   std::expected<void, TrySendError<T>>
   try_send_for(T item,
@@ -57,12 +67,24 @@ public:
     return this->channel->try_send_for(std::move(item), timeout);
   }
 
+  /// Send an item on the channel with a deadline.
+  ///
+  /// Blocks until the receiver requests an item, the deadline is met, or
+  /// the receiver disconnects.
   template <typename Clock, typename Duration>
   std::expected<void, TrySendError<T>> try_send_until(
       T item, const std::chrono::time_point<Clock, Duration> &deadline) const {
     return this->channel->try_send_until(std::move(item), deadline);
   }
 
+  /// Disconnect from the channel.
+  ///
+  /// There is often no need to call this function because the destructor will
+  /// do the same thing.
+  ///
+  /// # Safety
+  /// After calling `disconnect`, a `Sender` has the same safety rules as a
+  /// default constructed `Sender`.
   void disconnect() {
     this->release();
     this->channel = nullptr;
