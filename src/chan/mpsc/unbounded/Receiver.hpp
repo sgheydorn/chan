@@ -1,6 +1,7 @@
 #ifndef _CHAN_MPSC_UNBOUNDED_RECEIVER_H
 #define _CHAN_MPSC_UNBOUNDED_RECEIVER_H
 
+#include <cassert>
 #include <memory>
 
 #include "../../RecvIter.hpp"
@@ -59,7 +60,10 @@ public:
   ///
   /// # Safety
   /// Causes undefined behavior if `is_null()` is `true`.
-  std::expected<T, RecvError> recv() const { return this->channel->recv(); }
+  std::expected<T, RecvError> recv() const {
+    assert(this->channel != nullptr);
+    return this->channel->recv();
+  }
 
   /// Receive an item from the channel without blocking.
   ///
@@ -69,6 +73,7 @@ public:
   /// # Safety
   /// Causes undefined behavior if `is_null()` is `true`.
   std::expected<T, TryRecvError> try_recv() const {
+    assert(this->channel != nullptr);
     return this->channel->try_recv();
   }
 
@@ -82,6 +87,7 @@ public:
   template <typename Rep, typename Period>
   std::expected<T, TryRecvError>
   try_recv_for(const std::chrono::duration<Rep, Period> &timeout) const {
+    assert(this->channel != nullptr);
     return this->channel->try_recv_for(timeout);
   }
 
@@ -95,6 +101,7 @@ public:
   template <typename Clock, typename Duration>
   std::expected<T, TryRecvError> try_recv_until(
       const std::chrono::time_point<Clock, Duration> &deadline) const {
+    assert(this->channel != nullptr);
     return this->channel->try_recv_until(deadline);
   }
 
@@ -106,6 +113,7 @@ public:
   /// # Safety
   /// Causes undefined behavior if `is_null()` is `true`.
   std::size_t channel_size() const {
+    assert(this->channel != nullptr);
     return this->channel->size.load(std::memory_order::relaxed);
   }
 
@@ -114,6 +122,7 @@ public:
   /// # Safety
   /// Causes undefined behavior if `is_null()` is `true`.
   std::size_t channel_capacity() const {
+    assert(this->channel != nullptr);
     return this->channel->capacity.load(std::memory_order::relaxed);
   }
 

@@ -1,6 +1,7 @@
 #ifndef _CHAN_MPMC_UNBOUNDED_SENDER_H
 #define _CHAN_MPMC_UNBOUNDED_SENDER_H
 
+#include <cassert>
 #include <memory>
 
 #include "../../SendIter.hpp"
@@ -70,6 +71,7 @@ public:
   /// # Safety
   /// Causes undefined behavior if `is_null()` is `true`.
   std::expected<void, SendError<T>> send(T item) const {
+    assert(this->channel != nullptr);
     return this->channel->send(std::move(item));
   }
 
@@ -78,6 +80,7 @@ public:
   /// # Safety
   /// Causes undefined behavior if `is_null()` is `true`.
   std::size_t channel_size() const {
+    assert(this->channel != nullptr);
     return this->channel->size.load(std::memory_order::relaxed);
   }
 
@@ -86,6 +89,7 @@ public:
   /// # Safety
   /// Causes undefined behavior if `is_null()` is `true`.
   std::size_t channel_capacity() const {
+    assert(this->channel != nullptr);
     return this->channel->capacity.load(std::memory_order::relaxed);
   }
 

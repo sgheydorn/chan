@@ -1,6 +1,7 @@
 #ifndef _CHAN_SPSC_UNBUFFERED_SENDER_H
 #define _CHAN_SPSC_UNBUFFERED_SENDER_H
 
+#include <cassert>
 #include <memory>
 
 #include "../../SendIter.hpp"
@@ -57,6 +58,7 @@ public:
   /// # Safety
   /// Causes undefined behavior if `is_null()` is `true`.
   std::expected<void, SendError<T>> send(T item) const {
+    assert(this->channel != nullptr);
     return this->channel->send(std::move(item));
   }
 
@@ -65,6 +67,7 @@ public:
   /// # Safety
   /// Causes undefined behavior if `is_null()` is `true`.
   std::expected<void, TrySendError<T>> try_send(T item) const {
+    assert(this->channel != nullptr);
     return this->channel->try_send(std::move(item));
   }
 
@@ -79,6 +82,7 @@ public:
   std::expected<void, TrySendError<T>>
   try_send_for(T item,
                const std::chrono::duration<Rep, Period> &timeout) const {
+    assert(this->channel != nullptr);
     return this->channel->try_send_for(std::move(item), timeout);
   }
 
@@ -92,6 +96,7 @@ public:
   template <typename Clock, typename Duration>
   std::expected<void, TrySendError<T>> try_send_until(
       T item, const std::chrono::time_point<Clock, Duration> &deadline) const {
+    assert(this->channel != nullptr);
     return this->channel->try_send_until(std::move(item), deadline);
   }
 

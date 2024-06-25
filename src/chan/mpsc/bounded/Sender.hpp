@@ -1,6 +1,7 @@
 #ifndef _CHAN_MPSC_BOUNDED_SENDER_H
 #define _CHAN_MPSC_BOUNDED_SENDER_H
 
+#include <cassert>
 #include <memory>
 
 #include "../../SendIter.hpp"
@@ -69,6 +70,7 @@ public:
   /// # Safety
   /// Causes undefined behavior if `is_null()` is `true`.
   std::expected<void, SendError<T>> send(T item) const {
+    assert(this->channel != nullptr);
     return this->channel->send(std::move(item));
   }
 
@@ -80,6 +82,7 @@ public:
   /// # Safety
   /// Causes undefined behavior if `is_null()` is `true`.
   std::expected<void, TrySendError<T>> try_send(T item) const {
+    assert(this->channel != nullptr);
     return this->channel->try_send(std::move(item));
   }
 
@@ -94,6 +97,7 @@ public:
   std::expected<void, TrySendError<T>>
   try_send_for(T item,
                const std::chrono::duration<Rep, Period> &timeout) const {
+    assert(this->channel != nullptr);
     return this->channel->try_send_for(std::move(item), timeout);
   }
 
@@ -107,6 +111,7 @@ public:
   template <typename Clock, typename Duration>
   std::expected<void, TrySendError<T>> try_send_until(
       T item, const std::chrono::time_point<Clock, Duration> &deadline) const {
+    assert(this->channel != nullptr);
     return this->channel->try_send_until(std::move(item), deadline);
   }
 
@@ -118,6 +123,7 @@ public:
   /// # Safety
   /// Causes undefined behavior if `is_null()` is `true`.
   std::size_t channel_size() const {
+    assert(this->channel != nullptr);
     return this->channel->size.load(std::memory_order::relaxed);
   }
 
@@ -125,7 +131,10 @@ public:
   ///
   /// # Safety
   /// Causes undefined behavior if `is_null()` is `true`.
-  std::size_t channel_capacity() const { return this->channel->capacity; }
+  std::size_t channel_capacity() const {
+    assert(this->channel != nullptr);
+    return this->channel->capacity;
+  }
 
   /// Disconnect from the channel.
   ///
