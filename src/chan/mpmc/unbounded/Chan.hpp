@@ -163,14 +163,14 @@ private:
     this->send_done.store(true, std::memory_order::release);
     auto receiver_count = this->receiver_count.load(std::memory_order::relaxed);
     this->recv_ready.release(receiver_count);
-    return this->disconnected.exchange(true, std::memory_order::relaxed);
+    return this->disconnected.exchange(true, std::memory_order::acq_rel);
   }
 
   bool release_receiver() {
     if (this->receiver_count.fetch_sub(1, std::memory_order::acq_rel) != 1) {
       return false;
     }
-    return this->disconnected.exchange(true, std::memory_order::relaxed);
+    return this->disconnected.exchange(true, std::memory_order::acq_rel);
   }
 };
 } // namespace chan::mpmc::unbounded

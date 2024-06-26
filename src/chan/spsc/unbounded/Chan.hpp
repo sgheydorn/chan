@@ -107,11 +107,11 @@ private:
   bool release_sender() {
     this->send_done.store(true, std::memory_order::release);
     this->recv_ready.release();
-    return this->disconnected.exchange(true, std::memory_order::relaxed);
+    return this->disconnected.exchange(true, std::memory_order::acq_rel);
   }
 
   bool release_receiver() {
-    return this->disconnected.exchange(true, std::memory_order::relaxed);
+    return this->disconnected.exchange(true, std::memory_order::acq_rel);
   }
 };
 } // namespace chan::spsc::unbounded

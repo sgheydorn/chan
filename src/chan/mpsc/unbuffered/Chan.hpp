@@ -236,7 +236,7 @@ private:
       this->send_done = true;
     }
     this->recv_ready.notify_all();
-    return this->disconnected.exchange(true, std::memory_order::relaxed);
+    return this->disconnected.exchange(true, std::memory_order::acq_rel);
   }
 
   bool release_receiver() {
@@ -245,7 +245,7 @@ private:
       this->recv_done = true;
     }
     this->send_ready.notify_all();
-    return this->disconnected.exchange(true, std::memory_order::relaxed);
+    return this->disconnected.exchange(true, std::memory_order::acq_rel);
   }
 };
 } // namespace chan::mpsc::unbuffered
