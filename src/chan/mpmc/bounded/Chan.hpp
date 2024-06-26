@@ -11,6 +11,10 @@
 #include "../Packet.hpp"
 
 namespace chan::mpmc::bounded {
+/// Channel implementation.
+///
+/// Aside from custom allocators, there is no reason to work with this class
+/// directly.
 template <typename T, typename A>
 class Chan : detail::BoundedChannel<Chan<T, A>, T> {
   friend struct detail::BoundedChannel<Chan, T>;
@@ -30,6 +34,10 @@ class Chan : detail::BoundedChannel<Chan<T, A>, T> {
   std::atomic_bool disconnected;
 
 public:
+  /// Create a channel that assumes a single `Sender` and single `Receiver`.
+  ///
+  /// This constructor should not be called directly. Instead, call the
+  /// `channel` function.
   Chan(std::size_t capacity, A allocator)
       : allocator(std::move(allocator)),
         packet_buffer(

@@ -6,6 +6,17 @@
 #include "Sender.hpp"
 
 namespace chan::spsc::bounded {
+/// Create a new channel and get a `Sender` and `Receiver` for it.
+///
+/// # Parameters
+/// `capacity` - Size of the channel's item buffer
+/// `buffer_allocator` (optional) - Allocator for the channel's item buffer
+/// `channel_allocator` (optional) - Allocator for the channel object
+///
+/// # Template parameters
+/// `T` - Item type of the channel
+/// `A1` (optional) - Type of `buffer_allocator` parameter
+/// `A2` (optional) - Type of `channel_allocator` parameter
 template <typename T, typename A1 = std::allocator<T>,
           typename A2 = std::allocator<Chan<T, A1>>>
 std::pair<Sender<T, A1, A2>, Receiver<T, A1, A2>>

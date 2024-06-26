@@ -12,6 +12,10 @@
 #include "ItemChunk.hpp"
 
 namespace chan::spsc::unbounded {
+/// Channel implementation.
+///
+/// Aside from custom allocators, there is no reason to work with this class
+/// directly.
 template <typename T, std::size_t CHUNK_SIZE, typename A>
   requires(CHUNK_SIZE != 0)
 class Chan : detail::UnboundedChannel<Chan<T, CHUNK_SIZE, A>, T> {
@@ -31,6 +35,10 @@ class Chan : detail::UnboundedChannel<Chan<T, CHUNK_SIZE, A>, T> {
   std::atomic_bool disconnected;
 
 public:
+  /// Create a channel that assumes a single `Sender` and single `Receiver`.
+  ///
+  /// This constructor should not be called directly. Instead, call the
+  /// `channel` function.
   Chan(A allocator)
       : allocator(std::move(allocator)),
         tail_chunk(std::allocator_traits<A>::allocate(this->allocator, 1)),

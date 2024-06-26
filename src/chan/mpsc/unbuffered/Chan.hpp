@@ -13,6 +13,10 @@
 #include "../../TrySendError.hpp"
 
 namespace chan::mpsc::unbuffered {
+/// Channel implementation.
+///
+/// Aside from custom allocators, there is no reason to work with this class
+/// directly.
 template <typename T, typename A> class Chan {
   template <typename, typename, typename> friend class Sender;
   template <typename, typename, typename> friend class Receiver;
@@ -29,6 +33,10 @@ template <typename T, typename A> class Chan {
   std::atomic_bool disconnected;
 
 public:
+  /// Create a channel that assumes a single `Sender` and single `Receiver`.
+  ///
+  /// This constructor should not be called directly. Instead, call the
+  /// `channel` function.
   Chan(A allocator)
       : send_packets(std::move(allocator)), recv_packet(nullptr),
         send_done(false), recv_done(false), sender_count(1),

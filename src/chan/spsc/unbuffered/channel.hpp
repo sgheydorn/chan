@@ -6,6 +6,14 @@
 #include "Sender.hpp"
 
 namespace chan::spsc::unbuffered {
+/// Create a new channel and get a `Sender` and `Receiver` for it.
+///
+/// # Parameters
+/// `allocator` (optional) - Allocator for the channel object
+///
+/// # Template parameters
+/// `T` - Item type of the channel
+/// `A` (optional) - Type of `allocator` parameter
 template <typename T, typename A = std::allocator<Chan<T>>>
 std::pair<Sender<T, A>, Receiver<T, A>> channel(A allocator = A()) {
   auto channel = std::allocator_traits<A>::allocate(allocator, 1);

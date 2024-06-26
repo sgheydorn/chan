@@ -18,6 +18,10 @@ private:
   A allocator;
 
 public:
+  /// Create the initial `Sender` for a channel.
+  ///
+  /// This constructor should not be called directly. Instead, call the
+  /// `channel` function.
   Sender(std::allocator_traits<A>::pointer channel, A allocator)
       : channel(std::move(channel)), allocator(std::move(allocator)) {}
 

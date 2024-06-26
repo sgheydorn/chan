@@ -6,6 +6,16 @@
 #include "Sender.hpp"
 
 namespace chan::mpmc::unbuffered {
+/// Create a new channel and get a `Sender` and `Receiver` for it.
+///
+/// # Parameters
+/// `packet_allocator` (optional) - Allocator for the internal channel data
+/// `channel_allocator` (optional) - Allocator for the channel object
+///
+/// # Template parameters
+/// `T` - Item type of the channel
+/// `A1` (optional) - Type of `packet_allocator` parameter
+/// `A2` (optional) - Type of `channel_allocator` parameter
 template <typename T, typename A1 = std::allocator<std::optional<T> *>,
           typename A2 = std::allocator<Chan<T, A1>>>
 std::pair<Sender<T, A1, A2>, Receiver<T, A1, A2>>

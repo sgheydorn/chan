@@ -7,7 +7,7 @@ enum class TryRecvErrorKind {
   ///
   /// For unbuffered channels, this means there are no pending send operations.
   ///
-  /// This is a transient.
+  /// This is a transient error.
   Empty,
 
   /// Channel has no items to receive and there are no remaining senders.
