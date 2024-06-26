@@ -69,7 +69,7 @@ public:
     auto index = this->head_index;
     while (chunk != this->tail_chunk || index != this->tail_index) {
       std::allocator_traits<A>::destroy(this->allocator,
-                                        chunk->packets + index);
+                                        &chunk->packets[index].item);
       if (++index == CHUNK_SIZE) {
         index = 0;
         chunk = chunk->next;
@@ -77,9 +77,17 @@ public:
     }
 
     auto c = chunk->next;
+    for (auto &packet : chunk->packets) {
+      std::allocator_traits<A>::destroy(this->allocator, &packet.read_ready);
+      std::allocator_traits<A>::destroy(this->allocator, &packet.write_ready);
+    }
     std::allocator_traits<A>::deallocate(this->allocator, chunk, 1);
     while (c != chunk) {
       auto next = c->next;
+      for (auto &packet : c->packets) {
+        std::allocator_traits<A>::destroy(this->allocator, &packet.read_ready);
+        std::allocator_traits<A>::destroy(this->allocator, &packet.write_ready);
+      }
       std::allocator_traits<A>::deallocate(this->allocator, c, 1);
       c = next;
     }

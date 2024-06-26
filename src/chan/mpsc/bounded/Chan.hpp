@@ -56,11 +56,17 @@ public:
     auto tail_index = this->tail_index.load(std::memory_order::relaxed);
     while (index != tail_index) {
       std::allocator_traits<A>::destroy(this->allocator,
-                                        this->packet_buffer + index);
+                                        &this->packet_buffer[index].item);
       if (++index == this->capacity) {
         index = 0;
       }
     }
+
+    for (std::size_t index = 0; index < this->capacity; ++index) {
+      std::allocator_traits<A>::destroy(this->allocator,
+                                        &this->packet_buffer[index].ready);
+    }
+
     std::allocator_traits<A>::deallocate(this->allocator, this->packet_buffer,
                                          this->capacity);
   }
