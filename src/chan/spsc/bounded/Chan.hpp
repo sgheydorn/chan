@@ -23,8 +23,8 @@ class Chan : detail::BoundedChannel<Chan<T, A>, T> {
   std::atomic_size_t size;
   detail::SemaphoreType send_ready;
   detail::SemaphoreType recv_ready;
-  std::atomic_bool send_done;
-  std::atomic_bool recv_done;
+  std::atomic_bool _send_done;
+  std::atomic_bool _recv_done;
   std::atomic_bool disconnected;
 
 public:
@@ -33,8 +33,8 @@ public:
         item_buffer(
             std::allocator_traits<A>::allocate(this->allocator, capacity)),
         capacity(capacity), head_index(0), tail_index(0), size(0),
-        send_ready(capacity), recv_ready(0), send_done(false), recv_done(false),
-        disconnected(false) {}
+        send_ready(capacity), recv_ready(0), _send_done(false),
+        _recv_done(false), disconnected(false) {}
 
   ~Chan() {
     auto index = this->head_index;
@@ -68,14 +68,22 @@ private:
     return item;
   }
 
+  bool send_done() const {
+    return this->_send_done.load(std::memory_order::acquire);
+  }
+
+  bool recv_done() const {
+    return this->_recv_done.load(std::memory_order::acquire);
+  }
+
   bool release_sender() {
-    this->send_done.store(true, std::memory_order::release);
+    this->_send_done.store(true, std::memory_order::release);
     this->recv_ready.release();
     return this->disconnected.exchange(true, std::memory_order::acq_rel);
   }
 
   bool release_receiver() {
-    this->recv_done.store(true, std::memory_order::release);
+    this->_recv_done.store(true, std::memory_order::release);
     this->send_ready.release();
     return this->disconnected.exchange(true, std::memory_order::acq_rel);
   }

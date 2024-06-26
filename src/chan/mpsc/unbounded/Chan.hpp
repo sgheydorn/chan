@@ -36,7 +36,6 @@ class Chan : detail::UnboundedChannel<Chan<T, CHUNK_SIZE, A>, T> {
   detail::SemaphoreType recv_ready;
 
   std::atomic_size_t sender_count;
-  std::atomic_bool send_done;
   std::atomic_bool disconnected;
 
 public:
@@ -44,7 +43,7 @@ public:
       : allocator(std::move(allocator)),
         tail_chunk(std::allocator_traits<A>::allocate(this->allocator, 1)),
         tail_index(0), head_chunk(this->tail_chunk), head_index(0), size(0),
-        capacity(CHUNK_SIZE), recv_ready(0), sender_count(1), send_done(false),
+        capacity(CHUNK_SIZE), recv_ready(0), sender_count(1),
         disconnected(false) {
     for (auto &packet : this->tail_chunk->packets) {
       std::allocator_traits<A>::construct(this->allocator, &packet.ready,
@@ -132,6 +131,10 @@ private:
     return item;
   }
 
+  bool send_done() const {
+    return this->sender_count.load(std::memory_order::acquire) == 0;
+  }
+
   void acquire_sender() {
     this->sender_count.fetch_add(1, std::memory_order::relaxed);
   }
@@ -140,7 +143,6 @@ private:
     if (this->sender_count.fetch_sub(1, std::memory_order::acq_rel) != 1) {
       return false;
     }
-    this->send_done.store(true, std::memory_order::release);
     this->recv_ready.release();
     return this->disconnected.exchange(true, std::memory_order::acq_rel);
   }

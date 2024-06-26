@@ -11,11 +11,11 @@
 namespace chan::detail {
 template <typename Self, typename T> struct BoundedChannel {
   std::expected<void, SendError<T>> send(T item) {
-    if (static_cast<Self *>(this)->recv_done.load(std::memory_order::acquire)) {
+    if (static_cast<Self *>(this)->recv_done()) {
       return std::unexpected(SendError{std::move(item)});
     }
     static_cast<Self *>(this)->send_ready.acquire();
-    if (static_cast<Self *>(this)->recv_done.load(std::memory_order::acquire)) {
+    if (static_cast<Self *>(this)->recv_done()) {
       return std::unexpected(SendError{std::move(item)});
     }
     static_cast<Self *>(this)->send_impl(std::move(item));
@@ -25,7 +25,7 @@ template <typename Self, typename T> struct BoundedChannel {
   }
 
   std::expected<void, TrySendError<T>> try_send(T item) {
-    if (static_cast<Self *>(this)->recv_done.load(std::memory_order::acquire)) {
+    if (static_cast<Self *>(this)->recv_done()) {
       return std::unexpected(
           TrySendError{TrySendErrorKind::Disconnected, std::move(item)});
     }
@@ -33,7 +33,7 @@ template <typename Self, typename T> struct BoundedChannel {
       return std::unexpected(
           TrySendError{TrySendErrorKind::Full, std::move(item)});
     }
-    if (static_cast<Self *>(this)->recv_done.load(std::memory_order::acquire)) {
+    if (static_cast<Self *>(this)->recv_done()) {
       return std::unexpected(
           TrySendError{TrySendErrorKind::Disconnected, std::move(item)});
     }
@@ -46,7 +46,7 @@ template <typename Self, typename T> struct BoundedChannel {
   template <typename Rep, typename Period>
   std::expected<void, TrySendError<T>>
   try_send_for(T item, const std::chrono::duration<Rep, Period> &timeout) {
-    if (static_cast<Self *>(this)->recv_done.load(std::memory_order::acquire)) {
+    if (static_cast<Self *>(this)->recv_done()) {
       return std::unexpected(
           TrySendError{TrySendErrorKind::Disconnected, std::move(item)});
     }
@@ -54,7 +54,7 @@ template <typename Self, typename T> struct BoundedChannel {
       return std::unexpected(
           TrySendError{TrySendErrorKind::Full, std::move(item)});
     }
-    if (static_cast<Self *>(this)->recv_done.load(std::memory_order::acquire)) {
+    if (static_cast<Self *>(this)->recv_done()) {
       return std::unexpected(
           TrySendError{TrySendErrorKind::Disconnected, std::move(item)});
     }
@@ -68,7 +68,7 @@ template <typename Self, typename T> struct BoundedChannel {
   std::expected<void, TrySendError<T>>
   try_send_until(T item,
                  const std::chrono::time_point<Clock, Duration> &deadline) {
-    if (static_cast<Self *>(this)->recv_done.load(std::memory_order::acquire)) {
+    if (static_cast<Self *>(this)->recv_done()) {
       return std::unexpected(
           TrySendError{TrySendErrorKind::Disconnected, std::move(item)});
     }
@@ -76,7 +76,7 @@ template <typename Self, typename T> struct BoundedChannel {
       return std::unexpected(
           TrySendError{TrySendErrorKind::Full, std::move(item)});
     }
-    if (static_cast<Self *>(this)->recv_done.load(std::memory_order::acquire)) {
+    if (static_cast<Self *>(this)->recv_done()) {
       return std::unexpected(
           TrySendError{TrySendErrorKind::Disconnected, std::move(item)});
     }
@@ -87,8 +87,7 @@ template <typename Self, typename T> struct BoundedChannel {
   }
 
   std::expected<T, RecvError> recv() {
-    if (!static_cast<Self *>(this)->send_done.load(
-            std::memory_order::acquire)) {
+    if (!static_cast<Self *>(this)->send_done()) {
       static_cast<Self *>(this)->recv_ready.acquire();
       if (this->decrement_size()) {
         return std::unexpected(RecvError{});
@@ -105,8 +104,7 @@ template <typename Self, typename T> struct BoundedChannel {
   }
 
   std::expected<T, TryRecvError> try_recv() {
-    if (!static_cast<Self *>(this)->send_done.load(
-            std::memory_order::acquire)) {
+    if (!static_cast<Self *>(this)->send_done()) {
       if (!static_cast<Self *>(this)->recv_ready.try_acquire()) {
         return std::unexpected(TryRecvError{TryRecvErrorKind::Empty});
       }
@@ -127,8 +125,7 @@ template <typename Self, typename T> struct BoundedChannel {
   template <typename Rep, typename Period>
   std::expected<T, TryRecvError>
   try_recv_for(const std::chrono::duration<Rep, Period> &timeout) {
-    if (!static_cast<Self *>(this)->send_done.load(
-            std::memory_order::acquire)) {
+    if (!static_cast<Self *>(this)->send_done()) {
       if (!static_cast<Self *>(this)->recv_ready.try_acquire_for(timeout)) {
         return std::unexpected(TryRecvError{TryRecvErrorKind::Empty});
       }
@@ -149,8 +146,7 @@ template <typename Self, typename T> struct BoundedChannel {
   template <typename Clock, typename Duration>
   std::expected<T, TryRecvError>
   try_recv_until(const std::chrono::time_point<Clock, Duration> &deadline) {
-    if (!static_cast<Self *>(this)->send_done.load(
-            std::memory_order::acquire)) {
+    if (!static_cast<Self *>(this)->send_done()) {
       if (!static_cast<Self *>(this)->recv_ready.try_acquire_until(deadline)) {
         return std::unexpected(TryRecvError{TryRecvErrorKind::Empty});
       }
