@@ -4,12 +4,13 @@
 #include <cassert>
 #include <memory>
 
+#include "../../DEFAULT_CHUNK_SIZE.hpp"
 #include "../../SendIter.hpp"
 #include "Chan.hpp"
 
 namespace chan::mpsc::unbounded {
 /// Sending half of a channel.
-template <typename T, std::size_t CHUNK_SIZE = 16,
+template <typename T, std::size_t CHUNK_SIZE = DEFAULT_CHUNK_SIZE,
           typename A1 = std::allocator<PacketChunk<T, CHUNK_SIZE>>,
           typename A2 = std::allocator<Chan<T, CHUNK_SIZE, A1>>>
 class Sender {

@@ -1,12 +1,13 @@
 #ifndef _CHAN_MPSC_UNBOUNDED_CREATE_H
 #define _CHAN_MPSC_UNBOUNDED_CREATE_H
 
+#include "../../DEFAULT_CHUNK_SIZE.hpp"
 #include "Chan.hpp"
 #include "Receiver.hpp"
 #include "Sender.hpp"
 
 namespace chan::mpsc::unbounded {
-template <typename T, std::size_t CHUNK_SIZE = 16,
+template <typename T, std::size_t CHUNK_SIZE = DEFAULT_CHUNK_SIZE,
           typename A1 = std::allocator<PacketChunk<T, CHUNK_SIZE>>,
           typename A2 = std::allocator<Chan<T, CHUNK_SIZE, A1>>>
 std::pair<Sender<T, CHUNK_SIZE, A1, A2>, Receiver<T, CHUNK_SIZE, A1, A2>>
