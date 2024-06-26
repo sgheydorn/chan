@@ -140,7 +140,7 @@ private:
     if (this->sender_count.fetch_sub(1, std::memory_order::acq_rel) != 1) {
       return false;
     }
-    this->send_done.store(true, std::memory_order::relaxed);
+    this->send_done.store(true, std::memory_order::release);
     this->recv_ready.release();
     return this->disconnected.exchange(true, std::memory_order::relaxed);
   }

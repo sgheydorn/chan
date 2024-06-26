@@ -125,7 +125,7 @@ private:
     Packet<T> *packet;
     {
       std::lock_guard _lock(this->head_position_mutex);
-      if (this->send_done.load(std::memory_order::relaxed) &&
+      if (this->send_done.load(std::memory_order::acquire) &&
           this->head_chunk == this->tail_chunk &&
           this->head_index == this->tail_index) {
         return {};
@@ -160,7 +160,7 @@ private:
     if (this->sender_count.fetch_sub(1, std::memory_order::acq_rel) != 1) {
       return false;
     }
-    this->send_done.store(true, std::memory_order::relaxed);
+    this->send_done.store(true, std::memory_order::release);
     auto receiver_count = this->receiver_count.load(std::memory_order::relaxed);
     this->recv_ready.release(receiver_count);
     return this->disconnected.exchange(true, std::memory_order::relaxed);
