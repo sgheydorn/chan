@@ -14,8 +14,8 @@
 namespace chan::spsc::unbounded {
 template <typename T, std::size_t CHUNK_SIZE, typename A>
   requires(CHUNK_SIZE != 0)
-class Channel : detail::UnboundedChannel<Channel<T, CHUNK_SIZE, A>, T> {
-  friend struct detail::UnboundedChannel<Channel, T>;
+class Chan : detail::UnboundedChannel<Chan<T, CHUNK_SIZE, A>, T> {
+  friend struct detail::UnboundedChannel<Chan, T>;
   template <typename, std::size_t, typename, typename> friend class Sender;
   template <typename, std::size_t, typename, typename> friend class Receiver;
 
@@ -31,7 +31,7 @@ class Channel : detail::UnboundedChannel<Channel<T, CHUNK_SIZE, A>, T> {
   std::atomic_bool disconnected;
 
 public:
-  Channel(A allocator)
+  Chan(A allocator)
       : allocator(std::move(allocator)),
         tail_chunk(std::allocator_traits<A>::allocate(this->allocator, 1)),
         tail_index(0), head_chunk(this->tail_chunk), head_index(0), size(0),
@@ -40,7 +40,7 @@ public:
     this->tail_chunk->next = this->tail_chunk;
   }
 
-  ~Channel() {
+  ~Chan() {
     auto chunk = this->head_chunk;
     auto index = this->head_index;
     while (chunk != this->tail_chunk || index != this->tail_index) {

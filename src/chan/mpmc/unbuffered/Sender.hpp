@@ -5,12 +5,12 @@
 #include <memory>
 
 #include "../../SendIter.hpp"
-#include "Channel.hpp"
+#include "Chan.hpp"
 
 namespace chan::mpmc::unbuffered {
 /// Sending half of a channel.
 template <typename T, typename A1 = std::allocator<std::optional<T> *>,
-          typename A2 = std::allocator<Channel<T, A1>>>
+          typename A2 = std::allocator<Chan<T, A1>>>
 class Sender {
 public:
   using Item = T;

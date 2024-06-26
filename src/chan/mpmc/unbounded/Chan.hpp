@@ -1,5 +1,5 @@
-#ifndef _CHAN_MPSC_UNBOUNDED_CHANNEL_H
-#define _CHAN_MPSC_UNBOUNDED_CHANNEL_H
+#ifndef _CHAN_MPMC_UNBOUNDED_CHANNEL_H
+#define _CHAN_MPMC_UNBOUNDED_CHANNEL_H
 
 #include <atomic>
 #include <expected>
@@ -13,11 +13,11 @@
 #include "../../detail/UnboundedChannel.hpp"
 #include "PacketChunk.hpp"
 
-namespace chan::mpsc::unbounded {
+namespace chan::mpmc::unbounded {
 template <typename T, std::size_t CHUNK_SIZE, typename A>
   requires(CHUNK_SIZE != 0)
-class Channel : detail::UnboundedChannel<Channel<T, CHUNK_SIZE, A>, T> {
-  friend struct detail::UnboundedChannel<Channel, T>;
+class Chan : detail::UnboundedChannel<Chan<T, CHUNK_SIZE, A>, T> {
+  friend struct detail::UnboundedChannel<Chan, T>;
   template <typename, std::size_t, typename, typename> friend class Sender;
   template <typename, std::size_t, typename, typename> friend class Receiver;
 
@@ -29,6 +29,7 @@ class Channel : detail::UnboundedChannel<Channel<T, CHUNK_SIZE, A>, T> {
 
   PacketChunk<T, CHUNK_SIZE> *head_chunk;
   std::size_t head_index;
+  std::mutex head_position_mutex;
 
   std::atomic_size_t size;
   std::atomic_size_t capacity;
@@ -36,24 +37,27 @@ class Channel : detail::UnboundedChannel<Channel<T, CHUNK_SIZE, A>, T> {
   detail::SemaphoreType recv_ready;
 
   std::atomic_size_t sender_count;
+  std::atomic_size_t receiver_count;
   std::atomic_bool send_done;
   std::atomic_bool disconnected;
 
 public:
-  Channel(A allocator)
+  Chan(A allocator)
       : allocator(std::move(allocator)),
         tail_chunk(std::allocator_traits<A>::allocate(this->allocator, 1)),
         tail_index(0), head_chunk(this->tail_chunk), head_index(0), size(0),
-        capacity(CHUNK_SIZE), recv_ready(0), sender_count(1), send_done(false),
-        disconnected(false) {
+        capacity(CHUNK_SIZE), recv_ready(0), sender_count(1), receiver_count(1),
+        send_done(false), disconnected(false) {
     for (auto &packet : this->tail_chunk->packets) {
-      std::allocator_traits<A>::construct(this->allocator, &packet.ready,
+      std::allocator_traits<A>::construct(this->allocator, &packet.read_ready,
                                           false);
+      std::allocator_traits<A>::construct(this->allocator, &packet.write_ready,
+                                          true);
     }
     this->tail_chunk->next = this->tail_chunk;
   }
 
-  ~Channel() {
+  ~Chan() {
     auto chunk = this->head_chunk;
     auto index = this->head_index;
     while (chunk != this->tail_chunk || index != this->tail_index) {
@@ -95,8 +99,10 @@ private:
           auto new_chunk =
               std::allocator_traits<A>::allocate(this->allocator, 1);
           for (auto &packet : new_chunk->packets) {
-            std::allocator_traits<A>::construct(this->allocator, &packet.ready,
-                                                false);
+            std::allocator_traits<A>::construct(this->allocator,
+                                                &packet.read_ready, false);
+            std::allocator_traits<A>::construct(this->allocator,
+                                                &packet.write_ready, true);
           }
           new_chunk->next = this->tail_chunk->next;
           this->tail_chunk->next = new_chunk;
@@ -105,29 +111,39 @@ private:
         }
       }
     }
+    while (!packet->write_ready.exchange(false, std::memory_order::acquire)) {
+      std::this_thread::yield();
+    }
     std::allocator_traits<A>::construct(this->allocator, &packet->item,
                                         std::move(item));
-    packet->ready.store(true, std::memory_order::release);
+    packet->read_ready.store(true, std::memory_order::release);
     this->recv_ready.release();
     return {};
   }
 
   std::optional<T> recv_impl() {
-    if (this->size.load(std::memory_order::relaxed) == 0) {
-      return {};
+    Packet<T> *packet;
+    {
+      std::lock_guard _lock(this->head_position_mutex);
+      if (this->send_done.load(std::memory_order::relaxed) &&
+          this->head_chunk == this->tail_chunk &&
+          this->head_index == this->tail_index) {
+        return {};
+      }
+      packet = &this->head_chunk->packets[this->head_index];
+      if (this->head_index != CHUNK_SIZE - 1) {
+        ++this->head_index;
+      } else {
+        this->head_index = 0;
+        this->head_chunk = this->head_chunk->next;
+      }
     }
-    auto &packet = this->head_chunk->packets[this->head_index];
-    while (!packet.ready.exchange(false, std::memory_order::acquire)) {
+    while (!packet->read_ready.exchange(false, std::memory_order::acquire)) {
       std::this_thread::yield();
     }
-    auto item = std::move(packet.item);
-    std::allocator_traits<A>::destroy(this->allocator, &packet.item);
-    if (this->head_index != CHUNK_SIZE - 1) {
-      ++this->head_index;
-    } else {
-      this->head_index = 0;
-      this->head_chunk = this->head_chunk->next;
-    }
+    auto item = std::move(packet->item);
+    std::allocator_traits<A>::destroy(this->allocator, &packet->item);
+    packet->write_ready.store(true, std::memory_order::release);
     this->size.fetch_sub(1, std::memory_order::release);
     return item;
   }
@@ -136,19 +152,27 @@ private:
     this->sender_count.fetch_add(1, std::memory_order::relaxed);
   }
 
+  void acquire_receiver() {
+    this->receiver_count.fetch_add(1, std::memory_order::relaxed);
+  }
+
   bool release_sender() {
     if (this->sender_count.fetch_sub(1, std::memory_order::acq_rel) != 1) {
       return false;
     }
     this->send_done.store(true, std::memory_order::relaxed);
-    this->recv_ready.release();
+    auto receiver_count = this->receiver_count.load(std::memory_order::relaxed);
+    this->recv_ready.release(receiver_count);
     return this->disconnected.exchange(true, std::memory_order::relaxed);
   }
 
   bool release_receiver() {
+    if (this->receiver_count.fetch_sub(1, std::memory_order::acq_rel) != 1) {
+      return false;
+    }
     return this->disconnected.exchange(true, std::memory_order::relaxed);
   }
 };
-} // namespace chan::mpsc::unbounded
+} // namespace chan::mpmc::unbounded
 
 #endif

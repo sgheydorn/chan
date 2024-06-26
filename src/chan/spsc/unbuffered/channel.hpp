@@ -1,13 +1,13 @@
 #ifndef _CHAN_SPSC_UNBUFFERED_CREATE_H
 #define _CHAN_SPSC_UNBUFFERED_CREATE_H
 
-#include "Channel.hpp"
+#include "Chan.hpp"
 #include "Receiver.hpp"
 #include "Sender.hpp"
 
 namespace chan::spsc::unbuffered {
-template <typename T, typename A = std::allocator<Channel<T>>>
-std::pair<Sender<T, A>, Receiver<T, A>> create(A allocator = A()) {
+template <typename T, typename A = std::allocator<Chan<T>>>
+std::pair<Sender<T, A>, Receiver<T, A>> channel(A allocator = A()) {
   auto channel = std::allocator_traits<A>::allocate(allocator, 1);
   std::allocator_traits<A>::construct(allocator, channel);
   Sender<T, A> sender(channel, allocator);

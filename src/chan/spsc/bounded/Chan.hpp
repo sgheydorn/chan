@@ -10,8 +10,8 @@
 
 namespace chan::spsc::bounded {
 template <typename T, typename A>
-class Channel : detail::BoundedChannel<Channel<T, A>, T> {
-  friend struct detail::BoundedChannel<Channel, T>;
+class Chan : detail::BoundedChannel<Chan<T, A>, T> {
+  friend struct detail::BoundedChannel<Chan, T>;
   template <typename, typename, typename> friend class Sender;
   template <typename, typename, typename> friend class Receiver;
 
@@ -28,7 +28,7 @@ class Channel : detail::BoundedChannel<Channel<T, A>, T> {
   std::atomic_bool disconnected;
 
 public:
-  Channel(std::size_t capacity, A allocator)
+  Chan(std::size_t capacity, A allocator)
       : allocator(std::move(allocator)),
         item_buffer(
             std::allocator_traits<A>::allocate(this->allocator, capacity)),
@@ -36,7 +36,7 @@ public:
         send_ready(capacity), recv_ready(0), send_done(false), recv_done(false),
         disconnected(false) {}
 
-  ~Channel() {
+  ~Chan() {
     auto index = this->head_index;
     while (index != this->tail_index) {
       std::allocator_traits<A>::destroy(this->allocator,

@@ -5,13 +5,13 @@
 #include <memory>
 
 #include "../../SendIter.hpp"
-#include "Channel.hpp"
+#include "Chan.hpp"
 
 namespace chan::mpsc::unbounded {
 /// Sending half of a channel.
 template <typename T, std::size_t CHUNK_SIZE = 16,
           typename A1 = std::allocator<PacketChunk<T, CHUNK_SIZE>>,
-          typename A2 = std::allocator<Channel<T, CHUNK_SIZE, A1>>>
+          typename A2 = std::allocator<Chan<T, CHUNK_SIZE, A1>>>
 class Sender {
 public:
   using Item = T;

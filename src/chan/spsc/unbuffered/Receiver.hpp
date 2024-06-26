@@ -5,11 +5,11 @@
 #include <memory>
 
 #include "../../RecvIter.hpp"
-#include "Channel.hpp"
+#include "Chan.hpp"
 
 namespace chan::spsc::unbuffered {
 /// Receiving half of a channel.
-template <typename T, typename A = std::allocator<Channel<T>>> class Receiver {
+template <typename T, typename A = std::allocator<Chan<T>>> class Receiver {
 public:
   using Item = T;
 

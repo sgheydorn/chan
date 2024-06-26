@@ -12,8 +12,8 @@
 
 namespace chan::mpmc::bounded {
 template <typename T, typename A>
-class Channel : detail::BoundedChannel<Channel<T, A>, T> {
-  friend struct detail::BoundedChannel<Channel, T>;
+class Chan : detail::BoundedChannel<Chan<T, A>, T> {
+  friend struct detail::BoundedChannel<Chan, T>;
   template <typename, typename, typename> friend class Sender;
   template <typename, typename, typename> friend class Receiver;
 
@@ -32,7 +32,7 @@ class Channel : detail::BoundedChannel<Channel<T, A>, T> {
   std::atomic_bool disconnected;
 
 public:
-  Channel(std::size_t capacity, A allocator)
+  Chan(std::size_t capacity, A allocator)
       : allocator(std::move(allocator)),
         packet_buffer(
             std::allocator_traits<A>::allocate(this->allocator, capacity)),
@@ -47,7 +47,7 @@ public:
     }
   }
 
-  ~Channel() {
+  ~Chan() {
     auto index = this->head_index.load(std::memory_order::relaxed);
     auto tail_index = this->tail_index.load(std::memory_order::relaxed);
     while (index != tail_index) {

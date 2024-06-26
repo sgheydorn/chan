@@ -1,5 +1,5 @@
-#ifndef _CHAN_MPMC_UNBUFFERED_CHANNEL_H
-#define _CHAN_MPMC_UNBUFFERED_CHANNEL_H
+#ifndef _CHAN_MPSC_UNBUFFERED_CHANNEL_H
+#define _CHAN_MPSC_UNBUFFERED_CHANNEL_H
 
 #include <atomic>
 #include <condition_variable>
@@ -12,13 +12,13 @@
 #include "../../TryRecvError.hpp"
 #include "../../TrySendError.hpp"
 
-namespace chan::mpmc::unbuffered {
-template <typename T, typename A> class Channel {
+namespace chan::mpsc::unbuffered {
+template <typename T, typename A> class Chan {
   template <typename, typename, typename> friend class Sender;
   template <typename, typename, typename> friend class Receiver;
 
   std::deque<std::optional<T> *, A> send_packets;
-  std::deque<std::optional<T> *, A> recv_packets;
+  std::optional<T> *recv_packet;
   bool send_done;
   bool recv_done;
   std::mutex packet_mutex;
@@ -26,21 +26,20 @@ template <typename T, typename A> class Channel {
   std::condition_variable recv_ready;
 
   std::atomic_size_t sender_count;
-  std::atomic_size_t receiver_count;
   std::atomic_bool disconnected;
 
 public:
-  Channel(A allocator)
-      : send_packets(allocator), recv_packets(std::move(allocator)),
-        send_done(false), recv_done(false), sender_count(1), receiver_count(1),
+  Chan(A allocator)
+      : send_packets(std::move(allocator)), recv_packet(nullptr),
+        send_done(false), recv_done(false), sender_count(1),
         disconnected(false) {}
 
 private:
   std::expected<void, SendError<T>> send(T item) {
     std::unique_lock lock(this->packet_mutex);
-    if (!this->recv_packets.empty()) {
-      this->recv_packets.front()->emplace(std::move(item));
-      this->recv_packets.pop_front();
+    if (this->recv_packet) {
+      this->recv_packet->emplace(std::move(item));
+      this->recv_packet = nullptr;
       lock.unlock();
       this->recv_ready.notify_all();
     } else {
@@ -62,12 +61,12 @@ private:
       return std::unexpected(
           TrySendError{TrySendErrorKind::Disconnected, std::move(item)});
     }
-    if (this->recv_packets.empty()) {
+    if (!this->recv_packet) {
       return std::unexpected(
           TrySendError{TrySendErrorKind::Full, std::move(item)});
     }
-    this->recv_packets.front()->emplace(std::move(item));
-    this->recv_packets.pop_front();
+    this->recv_packet->emplace(std::move(item));
+    this->recv_packet = nullptr;
     lock.unlock();
     this->recv_ready.notify_all();
     return {};
@@ -77,9 +76,9 @@ private:
   std::expected<void, TrySendError<T>>
   try_send_for(T item, const std::chrono::duration<Rep, Period> &timeout) {
     std::unique_lock lock(this->packet_mutex);
-    if (!this->recv_packets.empty()) {
-      this->recv_packets.front()->emplace(std::move(item));
-      this->recv_packets.pop_front();
+    if (this->recv_packet) {
+      this->recv_packet->emplace(std::move(item));
+      this->recv_packet = nullptr;
       lock.unlock();
       this->recv_ready.notify_all();
     } else {
@@ -106,9 +105,9 @@ private:
   try_send_until(T item,
                  const std::chrono::time_point<Clock, Duration> &deadline) {
     std::unique_lock lock(this->packet_mutex);
-    if (!this->recv_packets.empty()) {
-      this->recv_packets.front()->emplace(std::move(item));
-      this->recv_packets.pop_front();
+    if (this->recv_packet) {
+      this->recv_packet->emplace(std::move(item));
+      this->recv_packet = nullptr;
       lock.unlock();
       this->recv_ready.notify_all();
     } else {
@@ -141,7 +140,7 @@ private:
       return item;
     } else {
       std::optional<T> packet;
-      this->recv_packets.push_back(&packet);
+      this->recv_packet = &packet;
       this->recv_ready.wait(
           lock, [this, &packet] { return packet || this->send_done; });
       lock.unlock();
@@ -181,11 +180,11 @@ private:
       return item;
     } else {
       std::optional<T> packet;
-      auto entry = this->recv_packets.insert(this->recv_packets.end(), &packet);
+      this->recv_packet = &packet;
       if (!this->recv_ready.wait_for(lock, timeout, [this, &packet] {
             return packet || this->send_done;
           })) {
-        this->recv_packets.erase(entry);
+        this->recv_packet = nullptr;
         return std::unexpected(TryRecvError{TryRecvErrorKind::Empty});
       }
       lock.unlock();
@@ -209,11 +208,11 @@ private:
       return item;
     } else {
       std::optional<T> packet;
-      auto entry = this->recv_packets.insert(this->recv_packets.end(), &packet);
+      this->recv_packet = &packet;
       if (!this->recv_ready.wait_until(lock, deadline, [this, &packet] {
             return packet || this->send_done;
           })) {
-        this->recv_packets.erase(entry);
+        this->recv_packet = nullptr;
         return std::unexpected(TryRecvError{TryRecvErrorKind::Empty});
       }
       lock.unlock();
@@ -226,10 +225,6 @@ private:
 
   void acquire_sender() {
     this->sender_count.fetch_add(1, std::memory_order::relaxed);
-  }
-
-  void acquire_receiver() {
-    this->receiver_count.fetch_add(1, std::memory_order::relaxed);
   }
 
   bool release_sender() {
@@ -245,9 +240,6 @@ private:
   }
 
   bool release_receiver() {
-    if (this->receiver_count.fetch_sub(1, std::memory_order::acq_rel) != 1) {
-      return false;
-    }
     {
       std::lock_guard _lock(this->packet_mutex);
       this->recv_done = true;
@@ -256,6 +248,6 @@ private:
     return this->disconnected.exchange(true, std::memory_order::relaxed);
   }
 };
-} // namespace chan::mpmc::unbuffered
+} // namespace chan::mpsc::unbuffered
 
 #endif

@@ -5,11 +5,11 @@
 #include <memory>
 
 #include "../../SendIter.hpp"
-#include "Channel.hpp"
+#include "Chan.hpp"
 
 namespace chan::spsc::bounded {
 template <typename T, typename A1 = std::allocator<T>,
-          typename A2 = std::allocator<Channel<T, A1>>>
+          typename A2 = std::allocator<Chan<T, A1>>>
 /// Sending half of a channel.
 class Sender {
 public:
