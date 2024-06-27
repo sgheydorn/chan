@@ -95,7 +95,7 @@ private:
     return {};
   }
 
-  std::optional<T> recv_impl() {
+  std::optional<T> do_recv() {
     if (this->size.load(std::memory_order::relaxed) == 0) {
       return {};
     }

@@ -58,7 +58,7 @@ public:
   }
 
 private:
-  void send_impl(T item) {
+  void do_send(T item) {
     std::allocator_traits<A>::construct(
         this->allocator, this->item_buffer + this->tail_index, std::move(item));
     if (++this->tail_index == this->capacity) {
@@ -66,7 +66,7 @@ private:
     }
   }
 
-  T recv_impl() {
+  T do_recv() {
     auto &chan_item = this->item_buffer[this->head_index];
     auto item = std::move(chan_item);
     std::allocator_traits<A>::destroy(this->allocator, &chan_item);

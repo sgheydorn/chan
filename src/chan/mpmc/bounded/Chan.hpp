@@ -76,7 +76,7 @@ public:
   }
 
 private:
-  void send_impl(T item) {
+  void do_send(T item) {
     std::size_t tail_index;
     do {
       tail_index = this->tail_index.load(std::memory_order::relaxed);
@@ -93,7 +93,7 @@ private:
     packet.read_ready.store(true, std::memory_order::release);
   }
 
-  T recv_impl() {
+  T do_recv() {
     std::size_t head_index;
     do {
       head_index = this->head_index.load(std::memory_order::relaxed);

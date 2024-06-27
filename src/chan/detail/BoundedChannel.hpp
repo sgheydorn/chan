@@ -18,7 +18,7 @@ template <typename Self, typename T> struct BoundedChannel {
     if (static_cast<Self *>(this)->recv_done()) {
       return std::unexpected(SendError{std::move(item)});
     }
-    static_cast<Self *>(this)->send_impl(std::move(item));
+    static_cast<Self *>(this)->do_send(std::move(item));
     static_cast<Self *>(this)->size.fetch_add(1, std::memory_order::relaxed);
     static_cast<Self *>(this)->recv_ready.release();
     return {};
@@ -37,7 +37,7 @@ template <typename Self, typename T> struct BoundedChannel {
       return std::unexpected(
           TrySendError{TrySendErrorKind::Disconnected, std::move(item)});
     }
-    static_cast<Self *>(this)->send_impl(std::move(item));
+    static_cast<Self *>(this)->do_send(std::move(item));
     static_cast<Self *>(this)->size.fetch_add(1, std::memory_order::relaxed);
     static_cast<Self *>(this)->recv_ready.release();
     return {};
@@ -58,7 +58,7 @@ template <typename Self, typename T> struct BoundedChannel {
       return std::unexpected(
           TrySendError{TrySendErrorKind::Disconnected, std::move(item)});
     }
-    static_cast<Self *>(this)->send_impl(std::move(item));
+    static_cast<Self *>(this)->do_send(std::move(item));
     static_cast<Self *>(this)->size.fetch_add(1, std::memory_order::relaxed);
     static_cast<Self *>(this)->recv_ready.release();
     return {};
@@ -80,7 +80,7 @@ template <typename Self, typename T> struct BoundedChannel {
       return std::unexpected(
           TrySendError{TrySendErrorKind::Disconnected, std::move(item)});
     }
-    static_cast<Self *>(this)->send_impl(std::move(item));
+    static_cast<Self *>(this)->do_send(std::move(item));
     static_cast<Self *>(this)->size.fetch_add(1, std::memory_order::relaxed);
     static_cast<Self *>(this)->recv_ready.release();
     return {};
@@ -92,14 +92,14 @@ template <typename Self, typename T> struct BoundedChannel {
       if (this->decrement_size()) {
         return std::unexpected(RecvError{});
       }
-      auto item = static_cast<Self *>(this)->recv_impl();
+      auto item = static_cast<Self *>(this)->do_recv();
       static_cast<Self *>(this)->send_ready.release();
       return item;
     } else {
       if (this->decrement_size()) {
         return std::unexpected(RecvError{});
       }
-      return static_cast<Self *>(this)->recv_impl();
+      return static_cast<Self *>(this)->do_recv();
     }
   }
 
@@ -111,14 +111,14 @@ template <typename Self, typename T> struct BoundedChannel {
       if (this->decrement_size()) {
         return std::unexpected(TryRecvError{TryRecvErrorKind::Disconnected});
       }
-      auto item = static_cast<Self *>(this)->recv_impl();
+      auto item = static_cast<Self *>(this)->do_recv();
       static_cast<Self *>(this)->send_ready.release();
       return item;
     } else {
       if (this->decrement_size()) {
         return std::unexpected(TryRecvError{TryRecvErrorKind::Disconnected});
       }
-      return static_cast<Self *>(this)->recv_impl();
+      return static_cast<Self *>(this)->do_recv();
     }
   }
 
@@ -132,14 +132,14 @@ template <typename Self, typename T> struct BoundedChannel {
       if (this->decrement_size()) {
         return std::unexpected(TryRecvError{TryRecvErrorKind::Disconnected});
       }
-      auto item = static_cast<Self *>(this)->recv_impl();
+      auto item = static_cast<Self *>(this)->do_recv();
       static_cast<Self *>(this)->send_ready.release();
       return item;
     } else {
       if (this->decrement_size()) {
         return std::unexpected(TryRecvError{TryRecvErrorKind::Disconnected});
       }
-      return static_cast<Self *>(this)->recv_impl();
+      return static_cast<Self *>(this)->do_recv();
     }
   }
 
@@ -153,14 +153,14 @@ template <typename Self, typename T> struct BoundedChannel {
       if (this->decrement_size()) {
         return std::unexpected(TryRecvError{TryRecvErrorKind::Disconnected});
       }
-      auto item = static_cast<Self *>(this)->recv_impl();
+      auto item = static_cast<Self *>(this)->do_recv();
       static_cast<Self *>(this)->send_ready.release();
       return item;
     } else {
       if (this->decrement_size()) {
         return std::unexpected(TryRecvError{TryRecvErrorKind::Disconnected});
       }
-      return static_cast<Self *>(this)->recv_impl();
+      return static_cast<Self *>(this)->do_recv();
     }
   }
 

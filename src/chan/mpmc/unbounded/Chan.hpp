@@ -136,7 +136,7 @@ private:
     return {};
   }
 
-  std::optional<T> recv_impl() {
+  std::optional<T> do_recv() {
     Packet<T> *packet;
     {
       std::lock_guard _lock(this->head_position_mutex);
