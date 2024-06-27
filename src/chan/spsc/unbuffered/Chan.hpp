@@ -6,17 +6,15 @@
 #include <expected>
 #include <optional>
 
-#include "../../RecvError.hpp"
-#include "../../SendError.hpp"
-#include "../../TryRecvError.hpp"
-#include "../../TrySendError.hpp"
+#include "../../detail/UnbufferedChannel.hpp"
 
 namespace chan::spsc::unbuffered {
 /// Channel implementation.
 ///
 /// Aside from custom allocators, there is no reason to work with this class
 /// directly.
-template <typename T> class Chan {
+template <typename T> class Chan : detail::UnbufferedChannel<Chan<T>, T> {
+  friend struct detail::UnbufferedChannel<Chan, T>;
   template <typename, typename> friend class Sender;
   template <typename, typename> friend class Receiver;
 
@@ -40,192 +38,36 @@ public:
         recv_done(false), disconnected(false) {}
 
 private:
-  std::expected<void, SendError<T>> send(T item) {
-    std::unique_lock lock(this->packet_mutex);
-    if (this->recv_packet) {
-      this->recv_packet->emplace(std::move(item));
-      this->recv_packet = nullptr;
-      lock.unlock();
-      this->recv_ready.notify_all();
-    } else {
-      std::optional<T> packet(std::move(item));
-      this->send_packet = &packet;
-      this->send_ready.wait(
-          lock, [this, &packet] { return !packet || this->recv_done; });
-      lock.unlock();
-      if (packet) {
-        return std::unexpected(SendError{std::move(*packet)});
-      }
-    }
-    return {};
-  }
+  bool has_send_packet() const { return this->send_packet != nullptr; }
 
-  std::expected<void, TrySendError<T>> try_send(T item) {
-    std::unique_lock lock(this->packet_mutex);
-    if (this->recv_done) {
-      return std::unexpected(
-          TrySendError{TrySendErrorKind::Disconnected, std::move(item)});
-    }
-    if (!this->recv_packet) {
-      return std::unexpected(
-          TrySendError{TrySendErrorKind::Full, std::move(item)});
-    }
-    this->recv_packet->emplace(std::move(item));
-    this->recv_packet = nullptr;
-    lock.unlock();
-    this->recv_ready.notify_all();
-    return {};
-  }
-
-  template <typename Rep, typename Period>
-  std::expected<void, TrySendError<T>>
-  try_send_for(T item, const std::chrono::duration<Rep, Period> &timeout) {
-    std::unique_lock lock(this->packet_mutex);
-    if (this->recv_packet) {
-      this->recv_packet->emplace(std::move(item));
-      this->recv_packet = nullptr;
-      lock.unlock();
-      this->recv_ready.notify_all();
-    } else {
-      std::optional<T> packet(std::move(item));
-      this->send_packet = &packet;
-      if (!this->send_ready.wait_for(lock, timeout, [this, &packet] {
-            return !packet || this->recv_done;
-          })) {
-        this->send_packet = nullptr;
-        return std::unexpected(
-            TrySendError{TrySendErrorKind::Full, std::move(*packet)});
-      }
-      lock.unlock();
-      if (packet) {
-        return std::unexpected(
-            TrySendError{TrySendErrorKind::Disconnected, std::move(*packet)});
-      }
-    }
-    return {};
-  }
-
-  template <typename Clock, typename Duration>
-  std::expected<void, TrySendError<T>>
-  try_send_until(T item,
-                 const std::chrono::time_point<Clock, Duration> &deadline) {
-    std::unique_lock lock(this->packet_mutex);
-    if (this->recv_packet) {
-      this->recv_packet->emplace(std::move(item));
-      this->recv_packet = nullptr;
-      lock.unlock();
-      this->recv_ready.notify_all();
-    } else {
-      std::optional<T> packet(std::move(item));
-      this->send_packet = &packet;
-      if (!this->send_ready.wait_until(lock, deadline, [this, &packet] {
-            return !packet || this->recv_done;
-          })) {
-        this->send_packet = nullptr;
-        return std::unexpected(
-            TrySendError{TrySendErrorKind::Full, std::move(*packet)});
-      }
-      lock.unlock();
-      if (packet) {
-        return std::unexpected(
-            TrySendError{TrySendErrorKind::Disconnected, std::move(*packet)});
-      }
-    }
-    return {};
-  }
-
-  std::expected<T, RecvError> recv() {
-    std::unique_lock lock(this->packet_mutex);
-    if (this->send_packet) {
-      auto item = std::move(**this->send_packet);
-      this->send_packet->reset();
-      this->send_packet = nullptr;
-      lock.unlock();
-      this->send_ready.notify_all();
-      return item;
-    } else {
-      std::optional<T> packet;
-      this->recv_packet = &packet;
-      this->recv_ready.wait(
-          lock, [this, &packet] { return packet || this->send_done; });
-      lock.unlock();
-      if (!packet) {
-        return std::unexpected(RecvError{});
-      }
-      return std::move(*packet);
-    }
-  }
-
-  std::expected<T, TryRecvError> try_recv() {
-    std::unique_lock lock(this->packet_mutex);
-    if (this->send_done) {
-      return std::unexpected(TryRecvError{TryRecvErrorKind::Disconnected});
-    }
-    if (!this->send_packet) {
-      return std::unexpected(TryRecvError{TryRecvErrorKind::Empty});
-    }
+  T take_send_packet() {
     auto item = std::move(**this->send_packet);
     this->send_packet->reset();
     this->send_packet = nullptr;
-    lock.unlock();
-    this->send_ready.notify_all();
     return item;
   }
 
-  template <typename Rep, typename Period>
-  std::expected<T, TryRecvError>
-  try_recv_for(const std::chrono::duration<Rep, Period> &timeout) {
-    std::unique_lock lock(this->packet_mutex);
-    if (this->send_packet) {
-      auto item = std::move(**this->send_packet);
-      this->send_packet->reset();
-      this->send_packet = nullptr;
-      lock.unlock();
-      this->send_ready.notify_all();
-      return item;
-    } else {
-      std::optional<T> packet;
-      this->recv_packet = &packet;
-      if (!this->recv_ready.wait_for(lock, timeout, [this, &packet] {
-            return packet || this->send_done;
-          })) {
-        this->recv_packet = nullptr;
-        return std::unexpected(TryRecvError{TryRecvErrorKind::Empty});
-      }
-      lock.unlock();
-      if (!packet) {
-        return std::unexpected(TryRecvError{TryRecvErrorKind::Disconnected});
-      }
-      return std::move(*packet);
-    }
+  void register_send_packet(std::optional<T> *packet) {
+    this->send_packet = packet;
   }
 
-  template <typename Clock, typename Duration>
-  std::expected<T, TryRecvError>
-  try_recv_until(const std::chrono::time_point<Clock, Duration> &deadline) {
-    std::unique_lock lock(this->packet_mutex);
-    if (this->send_packet) {
-      auto item = std::move(**this->send_packet);
-      this->send_packet->reset();
-      this->send_packet = nullptr;
-      lock.unlock();
-      this->send_ready.notify_all();
-      return item;
-    } else {
-      std::optional<T> packet;
-      this->recv_packet = &packet;
-      if (!this->recv_ready.wait_until(lock, deadline, [this, &packet] {
-            return packet || this->send_done;
-          })) {
-        this->recv_packet = nullptr;
-        return std::unexpected(TryRecvError{TryRecvErrorKind::Empty});
-      }
-      lock.unlock();
-      if (!packet) {
-        return std::unexpected(TryRecvError{TryRecvErrorKind::Disconnected});
-      }
-      return std::move(*packet);
-    }
+  void unregister_send_packet(std::optional<T> *) {
+    this->send_packet = nullptr;
+  }
+
+  bool has_recv_packet() const { return this->recv_packet != nullptr; }
+
+  void set_recv_packet(T item) {
+    this->recv_packet->emplace(std::move(item));
+    this->recv_packet = nullptr;
+  }
+
+  void register_recv_packet(std::optional<T> *packet) {
+    this->recv_packet = packet;
+  }
+
+  void unregister_recv_packet(std::optional<T> *) {
+    this->recv_packet = nullptr;
   }
 
   bool release_sender() {
