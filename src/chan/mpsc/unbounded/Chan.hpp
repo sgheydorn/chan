@@ -54,7 +54,7 @@ public:
         capacity(CHUNK_SIZE), recv_ready(0), sender_count(1),
         disconnected(false) {
     for (auto &packet : this->tail_chunk->packets) {
-      std::allocator_traits<A>::construct(this->allocator, &packet.ready,
+      std::allocator_traits<A>::construct(this->allocator, &packet.read_ready,
                                           false);
     }
     this->tail_chunk->next = this->tail_chunk;
@@ -74,13 +74,13 @@ public:
 
     auto c = chunk->next;
     for (auto &packet : chunk->packets) {
-      std::allocator_traits<A>::destroy(this->allocator, &packet.ready);
+      std::allocator_traits<A>::destroy(this->allocator, &packet.read_ready);
     }
     std::allocator_traits<A>::deallocate(this->allocator, chunk, 1);
     while (c != chunk) {
       auto next = c->next;
       for (auto &packet : c->packets) {
-        std::allocator_traits<A>::destroy(this->allocator, &packet.ready);
+        std::allocator_traits<A>::destroy(this->allocator, &packet.read_ready);
       }
       std::allocator_traits<A>::deallocate(this->allocator, c, 1);
       c = next;
@@ -108,8 +108,8 @@ private:
           auto new_chunk =
               std::allocator_traits<A>::allocate(this->allocator, 1);
           for (auto &packet : new_chunk->packets) {
-            std::allocator_traits<A>::construct(this->allocator, &packet.ready,
-                                                false);
+            std::allocator_traits<A>::construct(this->allocator,
+                                                &packet.read_ready, false);
           }
           new_chunk->next = this->tail_chunk->next;
           this->tail_chunk->next = new_chunk;
@@ -120,7 +120,7 @@ private:
     }
     std::allocator_traits<A>::construct(this->allocator, &packet->item,
                                         std::move(item));
-    packet->ready.store(true, std::memory_order::release);
+    packet->read_ready.store(true, std::memory_order::release);
     this->recv_ready.release();
     return {};
   }
@@ -130,7 +130,7 @@ private:
       return {};
     }
     auto &packet = this->head_chunk->packets[this->head_index];
-    while (!packet.ready.exchange(false, std::memory_order::acquire)) {
+    while (!packet.read_ready.exchange(false, std::memory_order::acquire)) {
       std::this_thread::yield();
     }
     auto item = std::move(packet.item);

@@ -10,7 +10,7 @@ namespace chan::mpsc {
 /// directly.
 template <typename T> struct Packet {
   T item;
-  std::atomic_bool ready;
+  std::atomic_bool read_ready;
 };
 } // namespace chan::mpsc
 

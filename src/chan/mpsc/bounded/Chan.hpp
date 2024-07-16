@@ -47,7 +47,7 @@ public:
         disconnected(false) {
     for (std::size_t index = 0; index < capacity; ++index) {
       std::allocator_traits<A>::construct(
-          this->allocator, &this->packet_buffer[index].ready, false);
+          this->allocator, &this->packet_buffer[index].read_ready, false);
     }
   }
 
@@ -64,7 +64,7 @@ public:
 
     for (std::size_t index = 0; index < this->capacity; ++index) {
       std::allocator_traits<A>::destroy(this->allocator,
-                                        &this->packet_buffer[index].ready);
+                                        &this->packet_buffer[index].read_ready);
     }
 
     std::allocator_traits<A>::deallocate(this->allocator, this->packet_buffer,
@@ -83,12 +83,12 @@ private:
     auto &packet = this->packet_buffer[tail_index];
     std::allocator_traits<A>::construct(this->allocator, &packet.item,
                                         std::move(item));
-    packet.ready.store(true, std::memory_order::release);
+    packet.read_ready.store(true, std::memory_order::release);
   }
 
   T do_recv() {
     auto &packet = this->packet_buffer[this->head_index];
-    while (!packet.ready.exchange(false, std::memory_order::acquire)) {
+    while (!packet.read_ready.exchange(false, std::memory_order::acquire)) {
       std::this_thread::yield();
     }
     auto item = std::move(packet.item);
