@@ -1,16 +1,18 @@
-#ifndef _CHAN_MPSC_UNBUFFERED_RECEIVER_H
-#define _CHAN_MPSC_UNBUFFERED_RECEIVER_H
+#ifndef _CHAN_SPMC_UNBOUNDED_RECEIVER_H
+#define _CHAN_SPMC_UNBOUNDED_RECEIVER_H
 
 #include <cassert>
 #include <memory>
 
+#include "../../DEFAULT_CHUNK_SIZE.hpp"
 #include "../../RecvIter.hpp"
 #include "Chan.hpp"
 
-namespace chan::mpsc::unbuffered {
+namespace chan::spmc::unbounded {
 /// Receiving half of a channel.
-template <typename T, typename A1 = std::allocator<std::optional<T> *>,
-          typename A2 = std::allocator<Chan<T, A1>>>
+template <typename T, std::size_t CHUNK_SIZE = DEFAULT_CHUNK_SIZE,
+          typename A1 = std::allocator<PacketChunk<T, CHUNK_SIZE>>,
+          typename A2 = std::allocator<Chan<T, CHUNK_SIZE, A1>>>
 class Receiver {
 public:
   using Item = T;
@@ -48,8 +50,18 @@ public:
     return *this;
   }
 
-  Receiver(const Receiver &) = delete;
-  Receiver &operator=(const Receiver &) = delete;
+  Receiver(const Receiver &other)
+      : channel(other.channel), allocator(other.allocator) {
+    this->acquire();
+  }
+
+  Receiver &operator=(const Receiver &other) {
+    this->release();
+    this->channel = other.channel;
+    this->allocator = other.allocator;
+    this->acquire();
+    return *this;
+  }
 
   /// Return `true` if `this` is not connected to a channel.
   bool is_null() const { return this->channel == nullptr; }
@@ -59,7 +71,7 @@ public:
 
   /// Receive an item from the channel.
   ///
-  /// Blocks until the sender sends an item or the sender disconnects.
+  /// Blocks until the channel is not empty or the sender disconnects.
   ///
   /// # Safety
   /// Causes undefined behavior if `is_null()` is `true`.
@@ -70,6 +82,9 @@ public:
 
   /// Receive an item from the channel without blocking.
   ///
+  /// Because semaphore try_acquire operations may spuriously fail, this
+  /// function may spuriously fail with `TryRecvErrorKind::Empty`.
+  ///
   /// # Safety
   /// Causes undefined behavior if `is_null()` is `true`.
   std::expected<T, TryRecvError> try_recv() const {
@@ -79,7 +94,7 @@ public:
 
   /// Receive an item from the channel with a timeout.
   ///
-  /// Blocks until the sender sends an item, the timeout is met, or the sender
+  /// Blocks until the channel is not empty, the timeout is met, or the sender
   /// disconnects.
   ///
   /// # Safety
@@ -93,7 +108,7 @@ public:
 
   /// Receive an item from the channel with a deadline.
   ///
-  /// Blocks until the sender sends an item, the deadline is met, or the sender
+  /// Blocks until the channel is not empty, the deadline is met, or the sender
   /// disconnects.
   ///
   /// # Safety
@@ -103,6 +118,27 @@ public:
       const std::chrono::time_point<Clock, Duration> &deadline) const {
     assert(this->channel != nullptr);
     return this->channel->try_recv_until(deadline);
+  }
+
+  /// Number of items in the channel.
+  ///
+  /// Since the channel's size could change at any moment, it should not be used
+  /// to determine if a receive operation will block/fail.
+  ///
+  /// # Safety
+  /// Causes undefined behavior if `is_null()` is `true`.
+  std::size_t channel_size() const {
+    assert(this->channel != nullptr);
+    return this->channel->size.load(std::memory_order::relaxed);
+  }
+
+  /// Number of items the channel has allocated space for.
+  ///
+  /// # Safety
+  /// Causes undefined behavior if `is_null()` is `true`.
+  std::size_t channel_capacity() const {
+    assert(this->channel != nullptr);
+    return this->channel->capacity.load(std::memory_order::relaxed);
   }
 
   /// Disconnect from the channel.
@@ -117,6 +153,12 @@ public:
   }
 
 private:
+  void acquire() {
+    if (this->channel) {
+      this->channel->acquire_receiver();
+    }
+  }
+
   void release() {
     if (this->channel && this->channel->release_receiver()) {
       std::allocator_traits<A2>::destroy(this->allocator, this->channel);
@@ -129,6 +171,6 @@ public:
 
   std::default_sentinel_t end() const { return {}; }
 };
-} // namespace chan::mpsc::unbuffered
+} // namespace chan::spmc::unbounded
 
 #endif
