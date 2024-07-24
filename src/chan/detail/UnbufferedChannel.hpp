@@ -1,6 +1,7 @@
 #ifndef _CHAN_DETAIL_UNBUFFERED_CHANNEL
 #define _CHAN_DETAIL_UNBUFFERED_CHANNEL
 
+#include <chrono>
 #include <expected>
 
 #include "../RecvError.hpp"
