@@ -9,6 +9,15 @@
 
 namespace chan::mpmc::unbuffered {
 /// Receiving half of a channel.
+///
+/// # Template parameters
+/// `T` - Channel's item type
+/// `A1` (optional) - Allocator for the channel's internal data
+/// `A2` (optional) - Allocator for the channel object
+///
+/// # Safety
+/// Do not share a `Receiver` between threads. If multiple threads need to
+/// receive from the same channel, give each thread a its own `Receiver` copy.
 template <typename T, typename A1 = std::allocator<std::optional<T> *>,
           typename A2 = std::allocator<Chan<T, A1>>>
 class Receiver {

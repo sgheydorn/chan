@@ -9,6 +9,15 @@
 
 namespace chan::mpsc::bounded {
 /// Receiving half of a channel.
+///
+/// # Template parameters
+/// `T` - Channel's item type
+/// `A1` (optional) - Allocator for the channel's item buffer
+/// `A2` (optional) - Allocator for the channel object
+///
+/// # Safety
+/// Do not share a `Receiver` between threads. If multiple threads need to
+/// receive from the same channel, use mpmc instead of mpsc.
 template <typename T, typename A1 = std::allocator<Packet<T>>,
           typename A2 = std::allocator<Chan<T, A1>>>
 class Receiver {

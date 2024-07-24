@@ -14,7 +14,7 @@ namespace chan::mpsc::bounded {
 /// `channel_allocator` (optional) - Allocator for the channel object
 ///
 /// # Template parameters
-/// `T` - Item type of the channel
+/// `T` - Channel's item type
 /// `A1` (optional) - Type of `buffer_allocator` parameter
 /// `A2` (optional) - Type of `channel_allocator` parameter
 template <typename T, typename A1 = std::allocator<Packet<T>>,

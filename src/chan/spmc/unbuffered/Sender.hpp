@@ -9,6 +9,15 @@
 
 namespace chan::spmc::unbuffered {
 /// Sending half of a channel.
+///
+/// # Template parameters
+/// `T` - Channel's item type
+/// `A1` (optional) - Allocator for the channel's internal data
+/// `A2` (optional) - Allocator for the channel object
+///
+/// # Safety
+/// Do not share a `Sender` between threads. If multiple threads need to
+/// send to the same channel, use mpmc instead of spmc.
 template <typename T, typename A1 = std::allocator<std::optional<T> *>,
           typename A2 = std::allocator<Chan<T, A1>>>
 class Sender {

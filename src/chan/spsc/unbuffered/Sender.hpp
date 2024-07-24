@@ -9,6 +9,14 @@
 
 namespace chan::spsc::unbuffered {
 /// Sending half of a channel.
+///
+/// # Template parameters
+/// `T` - Channel's item type
+/// `A` (optional) - Allocator for the channel object
+///
+/// # Safety
+/// Do not share a `Sender` between threads. If multiple threads need to
+/// send to the same channel, use mpsc instead of spsc.
 template <typename T, typename A = std::allocator<Chan<T>>> class Sender {
 public:
   using Item = T;

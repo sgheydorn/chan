@@ -14,8 +14,8 @@ namespace chan::spmc::unbounded {
 /// `channel_allocator` (optional) - Allocator for the channel object
 ///
 /// # Template parameters
-/// `T` - Item type of the channel
-/// `CHUNK_SIZE` (optional) - Size of item chunks
+/// `T` - Channel's item type
+/// `CHUNK_SIZE` (optional) - Size of the channel's item chunks
 /// `A1` (optional) - Type of `chunk_allocator` parameter
 /// `A2` (optional) - Type of `channel_allocator` parameter
 template <typename T, std::size_t CHUNK_SIZE = DEFAULT_CHUNK_SIZE,

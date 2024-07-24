@@ -12,7 +12,7 @@ namespace chan::spsc::unbuffered {
 /// `allocator` (optional) - Allocator for the channel object
 ///
 /// # Template parameters
-/// `T` - Item type of the channel
+/// `T` - Channel's item type
 /// `A` (optional) - Type of `allocator` parameter
 template <typename T, typename A = std::allocator<Chan<T>>>
 std::pair<Sender<T, A>, Receiver<T, A>> channel(A allocator = A()) {

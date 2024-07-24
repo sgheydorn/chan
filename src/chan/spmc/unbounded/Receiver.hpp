@@ -10,6 +10,16 @@
 
 namespace chan::spmc::unbounded {
 /// Receiving half of a channel.
+///
+/// # Template parameters
+/// `T` - Channel's item type
+/// `CHUNK_SIZE` (optional) - Size of the channel's item chunks
+/// `A1` (optional) - Allocator for the channel's item chunks
+/// `A2` (optional) - Allocator for the channel object
+///
+/// # Safety
+/// Do not share a `Receiver` between threads. If multiple threads need to
+/// receive from the same channel, give each thread a its own `Receiver` copy.
 template <typename T, std::size_t CHUNK_SIZE = DEFAULT_CHUNK_SIZE,
           typename A1 = std::allocator<PacketChunk<T, CHUNK_SIZE>>,
           typename A2 = std::allocator<Chan<T, CHUNK_SIZE, A1>>>

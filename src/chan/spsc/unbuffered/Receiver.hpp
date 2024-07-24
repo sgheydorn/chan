@@ -9,6 +9,14 @@
 
 namespace chan::spsc::unbuffered {
 /// Receiving half of a channel.
+///
+/// # Template parameters
+/// `T` - Channel's item type
+/// `A` (optional) - Allocator for the channel object
+///
+/// # Safety
+/// Do not share a `Receiver` between threads. If multiple threads need to
+/// receive from the same channel, use spmc instead of spsc.
 template <typename T, typename A = std::allocator<Chan<T>>> class Receiver {
 public:
   using Item = T;
