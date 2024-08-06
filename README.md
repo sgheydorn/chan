@@ -50,13 +50,13 @@ You create a channel by calling the `chan::<channel_variant>::<channel_type>::ch
 
 #### Bounded
 
-Items are stored in a fixed-sized buffer.
+Channel that buffers items in a fixed-sized array.
 `send` will block until the buffer is not full.
 `recv` will block until the buffer is not empty.
 
 #### Unbounded
 
-Items are stored in a growable buffer.
+Channel that buffers items in expandable storage.
 `send` will not block.
 `recv` will block until the buffer is not empty.
 
@@ -65,7 +65,7 @@ If there are more `send`s than `recv`s over a long period of time, the channel w
 
 #### Unbuffered
 
-Items are passed from sender to receiver without buffering.
+Channel that passes items from sender to receiver without buffering.
 `send` will block until there is a `recv` to pair with.
 `recv` will block until there is a `send` to pair with.
 
