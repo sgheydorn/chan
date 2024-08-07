@@ -51,14 +51,14 @@ You create a channel by calling the `chan::<channel_variant>::<channel_type>::ch
 #### Bounded
 
 Channel that buffers items in a fixed-sized array.
-`send` will block until the buffer is not full.
-`recv` will block until the buffer is not empty.
+`send` will block until the channel is not full.
+`recv` will block until the channel is not empty.
 
 #### Unbounded
 
 Channel that buffers items in expandable storage.
 `send` will not block.
-`recv` will block until the buffer is not empty.
+`recv` will block until the channel is not empty.
 
 When using unbounded channels, make sure the receiving thread(s) can keep up with the sending thread(s).
 If there are more `send`s than `recv`s over a long period of time, the channel will consume all available memory.
