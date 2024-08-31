@@ -38,7 +38,7 @@ int main() {
 
 ## Installation
 
-This is a header-only library. Add the contents of [src](./src) to your include path.
+This is a header-only library. Add the contents of [include](./include) to your include path.
 
 ## Overview
 
