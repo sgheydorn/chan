@@ -5,9 +5,10 @@ A C++ channel implementation similar to `std::sync::mpsc` from the Rust programm
 ## Example
 
 ```c++
-#include "chan/spsc/bounded/channel.hpp"
 #include <iostream>
 #include <thread>
+
+#include <chan/spsc/bounded/channel.hpp>
 
 int main() {
   // Create a bounded channel of `int`s with a buffer of 10 items.
@@ -38,7 +39,7 @@ int main() {
 
 ## Installation
 
-This is a header-only library. Add the contents of [include](./include) to your include path.
+This is a header-only library. Add the [include](./include) directory to your include path.
 
 ## Overview
 
@@ -101,15 +102,12 @@ Use `std::condition_variable` instead of `std::counting_semaphore`.
 
 This flag exists because some standard library implementations of `std::counting_semaphore` have bugs.
 It is a workaround for these bugs.
-
 Enabling this flag will decrease performance, so you should only use if needed.
-
-Only the existence of this macro matters. Its value is not used.
 
 ## Things to watch out for
 
-Do not share a `Sender` or `Receiver` between threads. All `Sender` and `Receiver` types are **not** thread-safe. You must give each thread its own copy of the `Sender` or `Receiver`.
+- Do not share a `Sender` or `Receiver` between threads. All `Sender` and `Receiver` types are **not** thread-safe. You must give each thread its own copy of the `Sender` or `Receiver`.
 
-When capacity is `0`, `chan::mpsc::bounded::channel` is different from Rust's `std::sync::mpsc::sync_channel`.
+- When capacity is `0`, `chan::mpsc::bounded::channel` is different from Rust's `std::sync::mpsc::sync_channel`.
 `chan::mpsc::bounded::channel` will create a bounded channel with capacity `0`.
 `std::sync::mpsc::sync_channel` will create an unbuffered channel.
