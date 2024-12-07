@@ -1445,27 +1445,27 @@ void spsc_bounded_one_to_one_disconnect_receiver_buffer_size_1() {
 }
 
 void spsc_unbounded_disconnect_sender() {
-  auto [tx, rx] = chan::spsc::unbounded::channel<int>();
+  auto [tx, rx] = chan::spsc::unbounded::channel<int, 16>();
   disconnect_sender(std::move(tx), std::move(rx));
 }
 
 void spsc_unbounded_disconnect_receiver() {
-  auto [tx, rx] = chan::spsc::unbounded::channel<int>();
+  auto [tx, rx] = chan::spsc::unbounded::channel<int, 16>();
   unbounded_disconnect_receiver(std::move(tx), std::move(rx));
 }
 
 void spsc_unbounded_one_item() {
-  auto [tx, rx] = chan::spsc::unbounded::channel<int>();
+  auto [tx, rx] = chan::spsc::unbounded::channel<int, 16>();
   one_item(std::move(tx), std::move(rx));
 }
 
 void spsc_unbounded_two_seperate() {
-  auto [tx, rx] = chan::spsc::unbounded::channel<int>();
+  auto [tx, rx] = chan::spsc::unbounded::channel<int, 16>();
   two_seperate(std::move(tx), std::move(rx));
 }
 
 void spsc_unbounded_two_consecutive() {
-  auto [tx, rx] = chan::spsc::unbounded::channel<int>();
+  auto [tx, rx] = chan::spsc::unbounded::channel<int, 16>();
   two_consecutive(std::move(tx), std::move(rx));
 }
 
@@ -1475,12 +1475,12 @@ void spsc_unbounded_leftover() {
 }
 
 void spsc_unbounded_try() {
-  auto [tx, rx] = chan::spsc::unbounded::channel<int>();
+  auto [tx, rx] = chan::spsc::unbounded::channel<int, 16>();
   unbounded_try(std::move(tx), std::move(rx));
 }
 
 void spsc_unbounded_one_to_one_disconnect_sender() {
-  auto [tx, rx] = chan::spsc::unbounded::channel<int>();
+  auto [tx, rx] = chan::spsc::unbounded::channel<int, 16>();
   one_to_one_disconnect_sender(std::move(tx), std::move(rx));
 }
 
@@ -1490,7 +1490,7 @@ void spsc_unbounded_one_to_one_disconnect_sender_chunk_size_1() {
 }
 
 void spsc_unbounded_one_to_one_disconnect_receiver() {
-  auto [tx, rx] = chan::spsc::unbounded::channel<int>();
+  auto [tx, rx] = chan::spsc::unbounded::channel<int, 16>();
   one_to_one_disconnect_receiver(std::move(tx), std::move(rx));
 }
 
@@ -1605,27 +1605,27 @@ void mpsc_bounded_add_remove_sender() {
 }
 
 void mpsc_unbounded_disconnect_sender() {
-  auto [tx, rx] = chan::mpsc::unbounded::channel<int>();
+  auto [tx, rx] = chan::mpsc::unbounded::channel<int, 16>();
   disconnect_sender(std::move(tx), std::move(rx));
 }
 
 void mpsc_unbounded_disconnect_receiver() {
-  auto [tx, rx] = chan::mpsc::unbounded::channel<int>();
+  auto [tx, rx] = chan::mpsc::unbounded::channel<int, 16>();
   unbounded_disconnect_receiver(std::move(tx), std::move(rx));
 }
 
 void mpsc_unbounded_one_item() {
-  auto [tx, rx] = chan::mpsc::unbounded::channel<int>();
+  auto [tx, rx] = chan::mpsc::unbounded::channel<int, 16>();
   one_item(std::move(tx), std::move(rx));
 }
 
 void mpsc_unbounded_two_seperate() {
-  auto [tx, rx] = chan::mpsc::unbounded::channel<int>();
+  auto [tx, rx] = chan::mpsc::unbounded::channel<int, 16>();
   two_seperate(std::move(tx), std::move(rx));
 }
 
 void mpsc_unbounded_two_consecutive() {
-  auto [tx, rx] = chan::mpsc::unbounded::channel<int>();
+  auto [tx, rx] = chan::mpsc::unbounded::channel<int, 16>();
   two_consecutive(std::move(tx), std::move(rx));
 }
 
@@ -1635,12 +1635,12 @@ void mpsc_unbounded_leftover() {
 }
 
 void mpsc_unbounded_try() {
-  auto [tx, rx] = chan::mpsc::unbounded::channel<int>();
+  auto [tx, rx] = chan::mpsc::unbounded::channel<int, 16>();
   unbounded_try(std::move(tx), std::move(rx));
 }
 
 void mpsc_unbounded_one_to_one_disconnect_sender() {
-  auto [tx, rx] = chan::mpsc::unbounded::channel<int>();
+  auto [tx, rx] = chan::mpsc::unbounded::channel<int, 16>();
   one_to_one_disconnect_sender(std::move(tx), std::move(rx));
 }
 
@@ -1650,7 +1650,7 @@ void mpsc_unbounded_one_to_one_disconnect_sender_chunk_size_1() {
 }
 
 void mpsc_unbounded_one_to_one_disconnect_receiver() {
-  auto [tx, rx] = chan::mpsc::unbounded::channel<int>();
+  auto [tx, rx] = chan::mpsc::unbounded::channel<int, 16>();
   one_to_one_disconnect_receiver(std::move(tx), std::move(rx));
 }
 
@@ -1660,7 +1660,7 @@ void mpsc_unbounded_one_to_one_disconnect_receiver_chunk_size_1() {
 }
 
 void mpsc_unbounded_many_to_one_disconnect_sender() {
-  auto [tx, rx] = chan::mpsc::unbounded::channel<int>();
+  auto [tx, rx] = chan::mpsc::unbounded::channel<int, 16>();
   many_to_one_disconnect_sender(std::move(tx), std::move(rx));
 }
 
@@ -1670,7 +1670,7 @@ void mpsc_unbounded_many_to_one_disconnect_sender_chunk_size_1() {
 }
 
 void mpsc_unbounded_many_to_one_disconnect_receiver() {
-  auto [tx, rx] = chan::mpsc::unbounded::channel<int>();
+  auto [tx, rx] = chan::mpsc::unbounded::channel<int, 16>();
   many_to_one_disconnect_receiver(std::move(tx), std::move(rx));
 }
 
@@ -1805,27 +1805,27 @@ void spmc_bounded_add_remove_receiver() {
 }
 
 void spmc_unbounded_disconnect_sender() {
-  auto [tx, rx] = chan::spmc::unbounded::channel<int>();
+  auto [tx, rx] = chan::spmc::unbounded::channel<int, 16>();
   disconnect_sender(std::move(tx), std::move(rx));
 }
 
 void spmc_unbounded_disconnect_receiver() {
-  auto [tx, rx] = chan::spmc::unbounded::channel<int>();
+  auto [tx, rx] = chan::spmc::unbounded::channel<int, 16>();
   unbounded_disconnect_receiver(std::move(tx), std::move(rx));
 }
 
 void spmc_unbounded_one_item() {
-  auto [tx, rx] = chan::spmc::unbounded::channel<int>();
+  auto [tx, rx] = chan::spmc::unbounded::channel<int, 16>();
   one_item(std::move(tx), std::move(rx));
 }
 
 void spmc_unbounded_two_seperate() {
-  auto [tx, rx] = chan::spmc::unbounded::channel<int>();
+  auto [tx, rx] = chan::spmc::unbounded::channel<int, 16>();
   two_seperate(std::move(tx), std::move(rx));
 }
 
 void spmc_unbounded_two_consecutive() {
-  auto [tx, rx] = chan::spmc::unbounded::channel<int>();
+  auto [tx, rx] = chan::spmc::unbounded::channel<int, 16>();
   two_consecutive(std::move(tx), std::move(rx));
 }
 
@@ -1835,12 +1835,12 @@ void spmc_unbounded_leftover() {
 }
 
 void spmc_unbounded_try() {
-  auto [tx, rx] = chan::spmc::unbounded::channel<int>();
+  auto [tx, rx] = chan::spmc::unbounded::channel<int, 16>();
   unbounded_try(std::move(tx), std::move(rx));
 }
 
 void spmc_unbounded_one_to_one_disconnect_sender() {
-  auto [tx, rx] = chan::spmc::unbounded::channel<int>();
+  auto [tx, rx] = chan::spmc::unbounded::channel<int, 16>();
   one_to_one_disconnect_sender(std::move(tx), std::move(rx));
 }
 
@@ -1850,7 +1850,7 @@ void spmc_unbounded_one_to_one_disconnect_sender_chunk_size_1() {
 }
 
 void spmc_unbounded_one_to_one_disconnect_receiver() {
-  auto [tx, rx] = chan::spmc::unbounded::channel<int>();
+  auto [tx, rx] = chan::spmc::unbounded::channel<int, 16>();
   one_to_one_disconnect_receiver(std::move(tx), std::move(rx));
 }
 
@@ -1860,7 +1860,7 @@ void spmc_unbounded_one_to_one_disconnect_receiver_chunk_size_1() {
 }
 
 void spmc_unbounded_one_to_many_disconnect_sender() {
-  auto [tx, rx] = chan::spmc::unbounded::channel<int>();
+  auto [tx, rx] = chan::spmc::unbounded::channel<int, 16>();
   one_to_many_disconnect_sender(std::move(tx), std::move(rx));
 }
 
@@ -1870,7 +1870,7 @@ void spmc_unbounded_one_to_many_disconnect_sender_chunk_size_1() {
 }
 
 void spmc_unbounded_one_to_many_disconnect_receiver() {
-  auto [tx, rx] = chan::spmc::unbounded::channel<int>();
+  auto [tx, rx] = chan::spmc::unbounded::channel<int, 16>();
   one_to_many_disconnect_receiver(std::move(tx), std::move(rx));
 }
 
@@ -2055,27 +2055,27 @@ void mpmc_bounded_add_remove_sender_receiver() {
 }
 
 void mpmc_unbounded_disconnect_sender() {
-  auto [tx, rx] = chan::mpmc::unbounded::channel<int>();
+  auto [tx, rx] = chan::mpmc::unbounded::channel<int, 16>();
   disconnect_sender(std::move(tx), std::move(rx));
 }
 
 void mpmc_unbounded_disconnect_receiver() {
-  auto [tx, rx] = chan::mpmc::unbounded::channel<int>();
+  auto [tx, rx] = chan::mpmc::unbounded::channel<int, 16>();
   unbounded_disconnect_receiver(std::move(tx), std::move(rx));
 }
 
 void mpmc_unbounded_one_item() {
-  auto [tx, rx] = chan::mpmc::unbounded::channel<int>();
+  auto [tx, rx] = chan::mpmc::unbounded::channel<int, 16>();
   one_item(std::move(tx), std::move(rx));
 }
 
 void mpmc_unbounded_two_seperate() {
-  auto [tx, rx] = chan::mpmc::unbounded::channel<int>();
+  auto [tx, rx] = chan::mpmc::unbounded::channel<int, 16>();
   two_seperate(std::move(tx), std::move(rx));
 }
 
 void mpmc_unbounded_two_consecutive() {
-  auto [tx, rx] = chan::mpmc::unbounded::channel<int>();
+  auto [tx, rx] = chan::mpmc::unbounded::channel<int, 16>();
   two_consecutive(std::move(tx), std::move(rx));
 }
 
@@ -2085,12 +2085,12 @@ void mpmc_unbounded_leftover() {
 }
 
 void mpmc_unbounded_try() {
-  auto [tx, rx] = chan::mpmc::unbounded::channel<int>();
+  auto [tx, rx] = chan::mpmc::unbounded::channel<int, 16>();
   unbounded_try(std::move(tx), std::move(rx));
 }
 
 void mpmc_unbounded_one_to_one_disconnect_sender() {
-  auto [tx, rx] = chan::mpmc::unbounded::channel<int>();
+  auto [tx, rx] = chan::mpmc::unbounded::channel<int, 16>();
   one_to_one_disconnect_sender(std::move(tx), std::move(rx));
 }
 
@@ -2100,7 +2100,7 @@ void mpmc_unbounded_one_to_one_disconnect_sender_chunk_size_1() {
 }
 
 void mpmc_unbounded_one_to_one_disconnect_receiver() {
-  auto [tx, rx] = chan::mpmc::unbounded::channel<int>();
+  auto [tx, rx] = chan::mpmc::unbounded::channel<int, 16>();
   one_to_one_disconnect_receiver(std::move(tx), std::move(rx));
 }
 
@@ -2110,7 +2110,7 @@ void mpmc_unbounded_one_to_one_disconnect_receiver_chunk_size_1() {
 }
 
 void mpmc_unbounded_many_to_one_disconnect_sender() {
-  auto [tx, rx] = chan::mpmc::unbounded::channel<int>();
+  auto [tx, rx] = chan::mpmc::unbounded::channel<int, 16>();
   many_to_one_disconnect_sender(std::move(tx), std::move(rx));
 }
 
@@ -2120,7 +2120,7 @@ void mpmc_unbounded_many_to_one_disconnect_sender_chunk_size_1() {
 }
 
 void mpmc_unbounded_many_to_one_disconnect_receiver() {
-  auto [tx, rx] = chan::mpmc::unbounded::channel<int>();
+  auto [tx, rx] = chan::mpmc::unbounded::channel<int, 16>();
   many_to_one_disconnect_receiver(std::move(tx), std::move(rx));
 }
 
@@ -2130,7 +2130,7 @@ void mpmc_unbounded_many_to_one_disconnect_receiver_chunk_size_1() {
 }
 
 void mpmc_unbounded_one_to_many_disconnect_sender() {
-  auto [tx, rx] = chan::mpmc::unbounded::channel<int>();
+  auto [tx, rx] = chan::mpmc::unbounded::channel<int, 16>();
   one_to_many_disconnect_sender(std::move(tx), std::move(rx));
 }
 
@@ -2140,7 +2140,7 @@ void mpmc_unbounded_one_to_many_disconnect_sender_chunk_size_1() {
 }
 
 void mpmc_unbounded_one_to_many_disconnect_receiver() {
-  auto [tx, rx] = chan::mpmc::unbounded::channel<int>();
+  auto [tx, rx] = chan::mpmc::unbounded::channel<int, 16>();
   one_to_many_disconnect_receiver(std::move(tx), std::move(rx));
 }
 
@@ -2150,7 +2150,7 @@ void mpmc_unbounded_one_to_many_disconnect_receiver_chunk_size_1() {
 }
 
 void mpmc_unbounded_many_to_many_disconnect_sender() {
-  auto [tx, rx] = chan::mpmc::unbounded::channel<int>();
+  auto [tx, rx] = chan::mpmc::unbounded::channel<int, 16>();
   many_to_many_disconnect_sender(std::move(tx), std::move(rx));
 }
 
@@ -2160,7 +2160,7 @@ void mpmc_unbounded_many_to_many_disconnect_sender_chunk_size_1() {
 }
 
 void mpmc_unbounded_many_to_many_disconnect_receiver() {
-  auto [tx, rx] = chan::mpmc::unbounded::channel<int>();
+  auto [tx, rx] = chan::mpmc::unbounded::channel<int, 16>();
   many_to_many_disconnect_receiver(std::move(tx), std::move(rx));
 }
 
