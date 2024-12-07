@@ -1,5 +1,5 @@
-#ifndef _CHAN_SPSC_UNBUFFERED_CREATE_H
-#define _CHAN_SPSC_UNBUFFERED_CREATE_H
+#ifndef _CHAN_SPSC_UNBUFFERED_CHANNEL_H
+#define _CHAN_SPSC_UNBUFFERED_CHANNEL_H
 
 #include "Chan.hpp"
 #include "Receiver.hpp"

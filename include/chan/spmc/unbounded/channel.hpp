@@ -1,5 +1,5 @@
-#ifndef _CHAN_SPMC_UNBOUNDED_CREATE_H
-#define _CHAN_SPMC_UNBOUNDED_CREATE_H
+#ifndef _CHAN_SPMC_UNBOUNDED_CHANNEL_H
+#define _CHAN_SPMC_UNBOUNDED_CHANNEL_H
 
 #include "../../DEFAULT_CHUNK_SIZE.hpp"
 #include "Chan.hpp"

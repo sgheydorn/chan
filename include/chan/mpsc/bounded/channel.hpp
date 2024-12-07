@@ -1,5 +1,5 @@
-#ifndef _CHAN_MPSC_BOUNDED_CREATE_H
-#define _CHAN_MPSC_BOUNDED_CREATE_H
+#ifndef _CHAN_MPSC_BOUNDED_CHANNEL_H
+#define _CHAN_MPSC_BOUNDED_CHANNEL_H
 
 #include "Chan.hpp"
 #include "Receiver.hpp"

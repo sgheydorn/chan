@@ -1,5 +1,5 @@
-#ifndef _CHAN_SPSC_UNBUFFERED_CHANNEL_H
-#define _CHAN_SPSC_UNBUFFERED_CHANNEL_H
+#ifndef _CHAN_SPSC_UNBUFFERED_CHAN_H
+#define _CHAN_SPSC_UNBUFFERED_CHAN_H
 
 #include <atomic>
 #include <condition_variable>
