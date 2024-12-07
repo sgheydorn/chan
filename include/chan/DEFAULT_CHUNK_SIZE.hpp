@@ -1,5 +1,5 @@
-#ifndef _CHAN_DEFAULT_CHUNK_SIZE_H
-#define _CHAN_DEFAULT_CHUNK_SIZE_H
+#ifndef _CHAN_DEFAULT_CHUNK_SIZE_HPP
+#define _CHAN_DEFAULT_CHUNK_SIZE_HPP
 
 #include <cstddef>
 

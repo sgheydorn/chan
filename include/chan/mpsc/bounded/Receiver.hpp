@@ -1,5 +1,5 @@
-#ifndef _CHAN_MPSC_BOUNDED_RECEIVER_H
-#define _CHAN_MPSC_BOUNDED_RECEIVER_H
+#ifndef _CHAN_MPSC_BOUNDED_RECEIVER_HPP
+#define _CHAN_MPSC_BOUNDED_RECEIVER_HPP
 
 #include <cassert>
 #include <memory>

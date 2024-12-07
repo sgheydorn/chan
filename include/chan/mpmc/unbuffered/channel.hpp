@@ -1,5 +1,5 @@
-#ifndef _CHAN_MPMC_UNBUFFERED_CHANNEL_H
-#define _CHAN_MPMC_UNBUFFERED_CHANNEL_H
+#ifndef _CHAN_MPMC_UNBUFFERED_CHANNEL_HPP
+#define _CHAN_MPMC_UNBUFFERED_CHANNEL_HPP
 
 #include "Chan.hpp"
 #include "Receiver.hpp"

@@ -1,5 +1,5 @@
-#ifndef _CHAN_DETAIL_CVAR_SEMAPHORE_H
-#define _CHAN_DETAIL_CVAR_SEMAPHORE_H
+#ifndef _CHAN_DETAIL_CVAR_SEMAPHORE_HPP
+#define _CHAN_DETAIL_CVAR_SEMAPHORE_HPP
 
 #include <condition_variable>
 

@@ -1,5 +1,5 @@
-#ifndef _CHAN_RECV_ITER_H
-#define _CHAN_RECV_ITER_H
+#ifndef _CHAN_RECV_ITER_HPP
+#define _CHAN_RECV_ITER_HPP
 
 #include <iterator>
 #include <optional>

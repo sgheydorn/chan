@@ -1,5 +1,5 @@
-#ifndef _CHAN_MPMC_BOUNDED_SENDER_H
-#define _CHAN_MPMC_BOUNDED_SENDER_H
+#ifndef _CHAN_MPMC_BOUNDED_SENDER_HPP
+#define _CHAN_MPMC_BOUNDED_SENDER_HPP
 
 #include <cassert>
 #include <memory>

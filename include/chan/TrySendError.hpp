@@ -1,5 +1,5 @@
-#ifndef _CHAN_TRY_SEND_ERROR_H
-#define _CHAN_TRY_SEND_ERROR_H
+#ifndef _CHAN_TRY_SEND_ERROR_HPP
+#define _CHAN_TRY_SEND_ERROR_HPP
 
 #include "TrySendErrorKind.hpp"
 

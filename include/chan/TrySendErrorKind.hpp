@@ -1,5 +1,5 @@
-#ifndef _CHAN_TRY_SEND_ERROR_KIND_H
-#define _CHAN_TRY_SEND_ERROR_KIND_H
+#ifndef _CHAN_TRY_SEND_ERROR_KIND_HPP
+#define _CHAN_TRY_SEND_ERROR_KIND_HPP
 
 namespace chan {
 enum class TrySendErrorKind {

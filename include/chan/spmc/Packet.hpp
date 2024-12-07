@@ -1,5 +1,5 @@
-#ifndef _CHAN_SPMC_PACKET_H
-#define _CHAN_SPMC_PACKET_H
+#ifndef _CHAN_SPMC_PACKET_HPP
+#define _CHAN_SPMC_PACKET_HPP
 
 #include <atomic>
 

@@ -1,5 +1,5 @@
-#ifndef _CHAN_SEND_ERROR_H
-#define _CHAN_SEND_ERROR_H
+#ifndef _CHAN_SEND_ERROR_HPP
+#define _CHAN_SEND_ERROR_HPP
 
 namespace chan {
 /// Error for the `send` operation. Occurs when there are no remaining
