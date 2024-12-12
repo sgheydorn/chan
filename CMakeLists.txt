@@ -87,7 +87,10 @@ foreach(header IN LISTS HEADER_FILES)
       $<INSTALL_INTERFACE:${header}>
   )
 endforeach()
-target_include_directories(chan INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> $<INSTALL_INTERFACE:include>)
+target_include_directories(chan INTERFACE
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
 target_compile_features(chan INTERFACE cxx_std_23)
 
 install(TARGETS chan EXPORT chan-config FILE_SET HEADERS DESTINATION include)
