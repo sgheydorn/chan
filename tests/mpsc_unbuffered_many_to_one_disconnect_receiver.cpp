@@ -1,0 +1,8 @@
+#include <chan/mpsc/unbuffered/channel.hpp>
+#include <test_util/many_to_one_disconnect_receiver.hpp>
+
+int main() {
+  auto [tx, rx] = chan::mpsc::unbuffered::channel<int>();
+  return test_util::many_to_one_disconnect_receiver(std::move(tx),
+                                                    std::move(rx));
+}
