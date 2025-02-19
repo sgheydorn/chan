@@ -94,7 +94,7 @@ target_include_directories(chan INTERFACE
 target_compile_features(chan INTERFACE cxx_std_23)
 
 install(TARGETS chan EXPORT chan-config FILE_SET HEADERS DESTINATION include)
-install(EXPORT chan-config DESTINATION lib/cmake/chan NAMESPACE chan::)
+install(EXPORT chan-config DESTINATION lib/cmake/chan)
 
 if(CHAN_BUILD_TESTS)
   enable_testing()
