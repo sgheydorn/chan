@@ -43,29 +43,6 @@ Channels are a way of streaming items between threads.
 
 You create a channel by calling the `chan::<channel_variant>::<channel_type>::channel` function, which returns a `Sender` and `Receiver` for the new channel.
 
-### Channel types
-
-#### Bounded
-
-Channel that buffers items in a fixed-sized array.
-`send` will block until the channel is not full.
-`recv` will block until the channel is not empty.
-
-#### Unbounded
-
-Channel that buffers items in expandable storage.
-`send` will not block.
-`recv` will block until the channel is not empty.
-
-When using unbounded channels, make sure the receiving thread(s) can keep up with the sending thread(s).
-If there are more `send`s than `recv`s over a long period of time, the channel will consume all available memory.
-
-#### Unbuffered
-
-Channel that passes items from sender to receiver without buffering.
-`send` will block until there is a `recv` to pair with.
-`recv` will block until there is a `send` to pair with.
-
 ### Channel variants
 
 For best performance, use the most restrictive variant that meets your needs.
@@ -89,6 +66,29 @@ For best performance, use the most restrictive variant that meets your needs.
 
 - Multiple sending threads. `Sender` is copyable.
 - Multiple receiving threads. `Receiver` is copyable.
+
+### Channel types
+
+#### Bounded
+
+Channel that buffers items in a fixed-sized array.
+`send` will block until the channel is not full.
+`recv` will block until the channel is not empty.
+
+#### Unbounded
+
+Channel that buffers items in expandable storage.
+`send` will not block.
+`recv` will block until the channel is not empty.
+
+When using unbounded channels, make sure the receiving thread(s) can keep up with the sending thread(s).
+If there are more `send`s than `recv`s over a long period of time, the channel will consume all available memory.
+
+#### Unbuffered
+
+Channel that passes items from sender to receiver without buffering.
+`send` will block until there is a `recv` to pair with.
+`recv` will block until there is a `send` to pair with.
 
 ## Compile-time flags (macros)
 
