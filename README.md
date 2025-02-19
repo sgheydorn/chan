@@ -37,10 +37,6 @@ int main() {
 
 - C++23
 
-## Installation
-
-This is a header-only library. Add the [include](./include) directory to your include path.
-
 ## Overview
 
 Channels are a way of streaming items between threads.
